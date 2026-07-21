@@ -86,7 +86,7 @@ Get familiar with the schema (structure) of the tables (what attributes do they 
 ### appearances
 
 ```
-⚪◗ DESCRIBE appearances
+⚪◗ DESCRIBE appearances;
 ┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
 │ column_name │ column_type │  null   │   key   │ default │  extra  │
 │   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
@@ -357,7 +357,7 @@ The following figure illustrates the schema of these tables: [![](https://15445.
 
 It's time to start constructing the SQL queries and put them into the placeholder files. You can start with using SQLite.
 
-### Q1 \[0 points\]
+### Q1 [0 points]
 
 The purpose of this query is to make sure that the formatting of your output matches exactly the formatting of our auto-grading script.
 
@@ -379,7 +379,7 @@ NL West
 
 You should put this SQL query into the appropriate file (q1\_sample.duckdb.sql) in the submission directory (placeholder).
 
-### Q2 \[20 points\]
+### Q2 [20 points]
 
 Find ten people with the highest home-runs (HR) in any single appearance, irrespective of year or team. Only consider people who have played at some point for a school in `PA`. Order the results from most to least home runs, and then by **first name** alphabetically.
 
@@ -399,7 +399,7 @@ Your first row should look like this:
 Bobby (Robert Leigh) Higginson|30
 ```
 
-### Q3 \[20 points\]
+### Q3 [20 points]
 
 Find ten (player, team) pairs where the player won the `Gold Glove` award in an active league after 1999 and batted in more games than the player's team's average since 1999. Order by the number of distinct award-winning years from most to least, and then by given name alphabetically.
 
@@ -419,7 +419,7 @@ Your first row should look like this:
 Ichiro|SEA|10
 ```
 
-### Q4 \[30 points\]
+### Q4 [30 points]
 
 Consider the event `E`: for a given (team, year), the team has more than 5 distinct players win an award and some manager has won an award in the same year. For all active leagues, find the teams where the event `E` has happened more than once. Order the results by the number of event `E` occurrences from most to least, and then by team name alphabetically.
 
@@ -439,7 +439,7 @@ One of the rows in the output looks like the following:
 National League|Atlanta Braves|3
 ```
 
-### Q5 \[20 points\]
+### Q5 [20 points]
 
 Find 10 Hall of Fame players who were inducted. For each inducted player, find the earliest teammate that they appeared with. If there are multiple teammates, pick the first teammate ordered by the teammate's constructed name alphabetically. Order by the hall of fame player's constructed name alphabetically.
 
@@ -461,7 +461,7 @@ Your first row should look like this:
 Addie (Adrian) Joss|Bill (William Henry) Bernhard|1902
 ```
 
-### Q6 \[10 points\]
+### Q6 [10 points]
 
 The league director wants you to insert new records into the `teams` table. For all teams in 2024, insert a new record using the `franchID` as the `teamID`. If the insert fails due to a conflict, set the existing record's `attendance` to -1.
 

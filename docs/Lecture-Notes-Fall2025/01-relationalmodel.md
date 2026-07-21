@@ -1,4 +1,4 @@
-# Lecture #01: Relational Model & Algebra
+### Lecture #01: Relational Model & Algebra
 
 15-445/645 Database Systems (Fall 2025) https://15445.courses.cs.cmu.edu/fall2025/ Carnegie Mellon University Andy Pavlo 
 
@@ -1997,4 +1997,603 @@ If you study LLVM, PostgreSQL, DuckDB, BusTub, CPython, Clang, or GCC, you'll no
 The key insight is that **the AST belongs to the compiler front end**. It is the compiler's first structured understanding of the program. Everything that follows—whether generating machine code for C++, bytecode for Python, or an execution plan for SQL—builds upon the information captured in the AST. Understanding this pipeline makes it much easier to learn compiler design and database internals, because the same architectural principles appear across all of these systems.
 
 
-## Q5： 
+
+
+## Q5 : Does any general guild when design the schemas of tables for an appliactions?
+
+This is an excellent question. **Schema design** is arguably the most important skill in database design. A well-designed schema makes an application easier to maintain, query, and scale, while a poor schema can cause years of technical debt.
+
+I'll answer this from the perspective of both **database theory** (relational model) and **production systems** (PostgreSQL, MySQL, SQL Server, Oracle).
+
+---
+
+### 1. What kinds of keys are there?
+
+Most beginners only know **Primary Key (PK)** and **Foreign Key (FK)**, but there are several important types of keys.
+
+| Key Type      | Purpose                                           | Must be Unique? | Can be NULL?                  |
+| ------------- | ------------------------------------------------- | --------------- | ----------------------------- |
+| Primary Key   | Uniquely identifies a row                         | Yes             | No                            |
+| Foreign Key   | References another table                          | No              | Usually yes (unless NOT NULL) |
+| Candidate Key | Any column(s) that could serve as a PK            | Yes             | No                            |
+| Alternate Key | Candidate key not chosen as PK                    | Yes             | No                            |
+| Composite Key | Key composed of multiple columns                  | Yes             | No                            |
+| Natural Key   | Real-world identifier                             | Usually         | Usually No                    |
+| Surrogate Key | Artificial identifier                             | Yes             | No                            |
+| Unique Key    | Enforces uniqueness                               | Yes             | DBMS dependent                |
+| Super Key     | Any set of columns that uniquely identifies a row | Yes             | No                            |
+
+---
+
+#### Example
+
+```sql
+CREATE TABLE Users
+(
+    id BIGINT PRIMARY KEY,
+
+    email VARCHAR(100) UNIQUE,
+
+    username VARCHAR(50) UNIQUE,
+
+    phone VARCHAR(20) UNIQUE
+);
+```
+
+Here
+
+```text
+Primary Key:
+    id
+
+Candidate Keys:
+    id
+    email
+    username
+    phone
+
+Alternate Keys:
+    email
+    username
+    phone
+```
+
+---
+
+### 2. Primary Key vs Candidate Key
+
+Suppose
+
+```text
+Employee
+
+EmployeeID
+
+Email
+
+SSN
+```
+
+All three are unique.
+
+Therefore all are **candidate keys**.
+
+You only choose one to become
+
+```text
+PRIMARY KEY
+```
+
+The rest become
+
+```sql
+UNIQUE
+```
+
+---
+
+### 3. Natural Key vs Surrogate Key
+
+This is one of the oldest debates in database design.
+
+#### Natural Key
+
+Uses business data.
+
+Example
+
+```text
+Country
+
+ISOCode
+
+US
+
+CN
+
+JP
+```
+
+Use
+
+```text
+ISOCode
+```
+
+as PK.
+
+Advantages
+
+* meaningful
+* already exists
+* no extra column
+
+Disadvantages
+
+* business rules change
+* values may change
+* composite keys become large
+
+---
+
+#### Surrogate Key
+
+Example
+
+```text
+User
+
+id
+
+name
+
+email
+```
+
+```text
+1 Michael
+
+2 Alice
+
+3 Bob
+```
+
+Advantages
+
+* never changes
+* integer index is small
+* faster joins
+* easier foreign keys
+
+Disadvantages
+
+* no business meaning
+* must still enforce business uniqueness
+
+---
+
+#### Production Systems
+
+Today, most companies choose
+
+```text
+BIGINT AUTO_INCREMENT
+
+UUID
+
+Snowflake ID
+
+ULID
+```
+
+as the primary key.
+
+Then they add
+
+```sql
+UNIQUE(email)
+```
+
+or
+
+```sql
+UNIQUE(employee_number)
+```
+
+---
+
+Example
+
+```sql
+CREATE TABLE Employee
+(
+    id BIGINT PRIMARY KEY,
+
+    employee_number VARCHAR(20) UNIQUE,
+
+    email VARCHAR(100) UNIQUE
+);
+```
+
+Notice
+
+The business key is still protected.
+
+---
+
+#### Which is Better?
+
+There isn't a universal winner. It depends on the domain.
+
+#### Natural Keys are good when
+
+The identifier:
+
+* never changes
+* is short
+* is universally accepted
+
+Examples
+
+```text
+Country Code
+
+Currency Code
+
+Airport Code
+
+ISBN
+
+VIN
+```
+
+---
+
+#### Surrogate Keys are better when
+
+Business data may change.
+
+Examples
+
+```text
+Customer
+
+Employee
+
+Orders
+
+Invoices
+
+Products
+
+Transactions
+```
+
+Nearly every modern application uses surrogate keys here.
+
+---
+
+#### My Recommendation
+
+For business applications
+
+```text
+Primary Key
+↓
+
+Surrogate Key
+```
+
+Business uniqueness
+
+↓
+
+Unique Constraints
+
+This is the most common modern pattern.
+
+---
+
+### Other Constraints You Should Design
+
+Schema design is about much more than keys.
+
+---
+
+#### NOT NULL
+
+Never allow impossible data.
+
+Instead of
+
+```sql
+email VARCHAR(100)
+```
+
+write
+
+```sql
+email VARCHAR(100) NOT NULL
+```
+
+---
+
+#### UNIQUE
+
+Example
+
+```sql
+email UNIQUE
+```
+
+Prevent duplicate accounts.
+
+---
+
+#### CHECK
+
+Example
+
+```sql
+CHECK(age >= 0)
+```
+
+or
+
+```sql
+CHECK(score BETWEEN 0 AND 100)
+```
+
+---
+
+#### DEFAULT
+
+Example
+
+```sql
+created_at TIMESTAMP
+DEFAULT CURRENT_TIMESTAMP
+```
+
+---
+
+#### INDEX
+
+Don't forget indexes.
+
+Example
+
+```sql
+CREATE INDEX idx_orders_customer
+ON Orders(customer_id);
+```
+
+Foreign keys often need indexes for performance, although not all DBMSs create them automatically.
+
+---
+
+#### Data Types
+
+Choose the smallest reasonable type.
+
+Bad
+
+```sql
+age VARCHAR
+```
+
+Good
+
+```sql
+age SMALLINT
+```
+
+Bad
+
+```sql
+price FLOAT
+```
+
+Good
+
+```sql
+price DECIMAL(10,2)
+```
+
+---
+
+#### Naming
+
+Good
+
+```text
+user_id
+
+created_at
+
+updated_at
+```
+
+Avoid
+
+```text
+id1
+
+value
+
+data
+
+temp
+```
+
+---
+
+#### Normalization
+
+Generally aim for
+
+* First Normal Form (1NF)
+* Second Normal Form (2NF)
+* Third Normal Form (3NF)
+
+Most OLTP applications should be at least in **3NF**.
+
+---
+
+#### Avoid Redundant Data
+
+Instead of
+
+```text
+Orders
+
+customer_name
+
+customer_phone
+```
+
+Store
+
+```text
+customer_id
+```
+
+and join to the `Customer` table.
+
+---
+
+#### Audit Columns
+
+Most enterprise tables include:
+
+```sql
+created_at
+
+updated_at
+
+created_by
+
+updated_by
+
+version
+```
+
+Some also include:
+
+```sql
+deleted_at
+```
+
+for soft deletes.
+
+---
+
+#### Concurrency
+
+If optimistic locking is needed:
+
+```sql
+version INTEGER
+```
+
+or
+
+```sql
+row_version
+```
+
+---
+
+### General Schema Design Workflow
+
+When designing a schema, I usually follow this process:
+
+```text
+Requirements
+      │
+      ▼
+Identify Entities
+      │
+      ▼
+Identify Relationships
+      │
+      ▼
+Define Attributes
+      │
+      ▼
+Choose Candidate Keys
+      │
+      ▼
+Choose Primary Keys
+      │
+      ▼
+Define Foreign Keys
+      │
+      ▼
+Add Constraints
+      │
+      ▼
+Normalize (3NF/BCNF)
+      │
+      ▼
+Design Indexes
+      │
+      ▼
+Review Query Patterns
+```
+
+Notice that **indexes come after understanding how the application queries the data**. They are an implementation detail to support performance, not a substitute for good logical design.
+
+---
+
+### A Production-Ready Example
+
+Suppose we're designing a banking application's `Customer` table:
+
+```sql
+CREATE TABLE Customer (
+    id BIGINT PRIMARY KEY,                     -- Surrogate PK
+
+    customer_number VARCHAR(20) NOT NULL UNIQUE, -- Business ID
+
+    email VARCHAR(255) NOT NULL UNIQUE,
+
+    first_name VARCHAR(100) NOT NULL,
+
+    last_name VARCHAR(100) NOT NULL,
+
+    date_of_birth DATE NOT NULL,
+
+    status VARCHAR(20) NOT NULL
+        CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+
+    created_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    version INTEGER NOT NULL DEFAULT 1
+);
+```
+
+This table demonstrates several best practices:
+
+* **Surrogate primary key** (`id`) for stable references and efficient joins.
+* **Natural/business keys** (`customer_number`, `email`) enforced with `UNIQUE`.
+* **NOT NULL** constraints to prevent incomplete records.
+* **CHECK** constraints to enforce valid business values.
+* **Audit columns** (`created_at`, `updated_at`) for traceability.
+* **Version column** for optimistic concurrency control.
+
+---
+
+### Advice for Learning Database Systems
+
+Since you're studying **CMU 15-445** and want to understand database internals, I'd suggest thinking about schema design at **three distinct layers**:
+
+1. **Logical Design (Relational Model)**: Entities, relationships, normalization, keys, and constraints.
+2. **Physical Design**: Data types, indexes, partitioning, storage layout, and access paths.
+3. **Operational Design**: Audit columns, versioning, soft deletes, security, and lifecycle management.
+
+Separating these layers makes it much easier to reason about why a schema looks the way it does, and it's the same perspective used by database architects when designing production systems.

@@ -360,6 +360,19 @@ GROUP BY e.cid
 HAVING AVG(s.gpa) > 3.9;
 ```
 
+
+#### SQL grammar 
+
+```sql
+FROM
+JOIN
+WHERE
+GROUP BY
+HAVING
+ORDER BY
+```
+
+
 ### **5** **String Operations**
 
 The SQL standard says that strings are **case sensitive** and **single-quotes only** . Real-world systems will vary in how loose they are about both points (e.g. MySQL).
@@ -8362,4 +8375,6 @@ The Halting Problem isn't difficult because it's computationally expensive—it 
 Turing's proof shows that if a perfect program `halts(program, input)` existed, we could construct another program that **always behaves opposite to its own prediction**, creating an unavoidable contradiction.
 
 That is why the Halting Problem is considered one of the foundational results of theoretical computer science: it establishes that there are **absolute limits on what any algorithm, compiler, static analyzer, or programming language can ever decide**.
+
+
 
