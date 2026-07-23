@@ -101,6 +101,19 @@ From the perspective of a database compiler:
 This distinction is reflected directly in the AST. For example, a SelectStmt node has children representing different clauses, and the WHERE child contains a predicate expression tree, while the SELECT child contains output expression trees. Understanding this relationship makes it much easier to follow how a SQL parser, binder, and optimizer transform a query internally.
 
 
+#### SQL grammar
+
+```sql
+SELECT
+FROM
+JOIN
+WHERE
+GROUP BY
+HAVING
+ORDER BY
+```
+
+
 
 ### **2** **Relational Languages**
 
@@ -361,16 +374,6 @@ HAVING AVG(s.gpa) > 3.9;
 ```
 
 
-#### SQL grammar 
-
-```sql
-FROM
-JOIN
-WHERE
-GROUP BY
-HAVING
-ORDER BY
-```
 
 
 ### **5** **String Operations**
@@ -2507,16 +2510,13 @@ is destroyed.
 
 ```sql
 WITH
+    A AS(
+        SELECT ...
+    ),
 
-A AS
-(
-    SELECT ...
-),
-
-B AS
-(
-    SELECT ...
-)
+    B AS(
+        SELECT ...
+    )
 
 SELECT ...
 FROM A
