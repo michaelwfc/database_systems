@@ -207,7 +207,639 @@ lahman-cmudb2025 D .help
 # Run .help --all for extended information
 # Run .help shortcuts for keyboard shortcuts
 lahman-cmudb2025 D 
+```
 
 
+# DuckDB
+## 1.Table mode vs  duckbox mode
+
+lahman-cmudb2025 D  DESCRIBE teams
+```sql
+⚪◗ DESCRIBE teams
+┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+│ column_name │ column_type │  null   │   key   │ default │  extra  │
+│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
+├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+│ yearID      │ SMALLINT    │ NO      │ PRI     │ NULL    │ NULL    │
+│ lgID        │ VARCHAR     │ NO      │ PRI     │ NULL    │ NULL    │
+│ teamID      │ VARCHAR     │ NO      │ PRI     │ NULL    │ NULL    │
+│ franchID    │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ divID       │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ teamRank    │ SMALLINT    │ YES     │ NULL    │ NULL    │ NULL    │
+│ name        │ VARCHAR     │ YES     │ NULL    │ NULL    │ NULL    │
+│ attendance  │ INTEGER     │ YES     │ NULL    │ NULL    │ NULL    │
+└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
+```
+
+why the same command change like this:
+lahman-cmudb2025 D DESCRIBE teams;
+┌───────────────────────────────────────────┐
+│                   teams                   │
+│                                           │
+│ yearID     smallint not null              │
+│ lgID       varchar  not null default NULL │
+│ teamID     varchar  not null              │
+│ franchID   varchar  default NULL          │
+│ divID      varchar  default NULL          │
+│ teamRank   smallint default NULL          │
+│ name       varchar  default NULL          │
+│ attendance integer  default NULL          │
+└───────────────────────────────────────────┘
 
 ```
+
+
+
+Good observation! This behavior is actually due to **different output modes in the DuckDB CLI**, not because `DESCRIBE` behaves differently.
+
+The SQL statement is the same:
+
+```sql
+DESCRIBE teams;
+```
+
+What changed is **how the DuckDB CLI renders the result set**.
+
+---
+
+### `DESCRIBE` returns a normal SQL result
+
+Many beginners think `DESCRIBE` is a special command.
+
+In DuckDB, it is actually a **SQL statement** that returns a table.
+
+Conceptually, it returns something like:
+
+| column_name | column_type | null | key | default | extra |
+| ----------- | ----------- | ---- | --- | ------- | ----- |
+| yearID      | SMALLINT    | NO   | PRI | NULL    |       |
+| lgID        | VARCHAR     | NO   | PRI | NULL    |       |
+| ...         | ...         | ...  | ... | ...     | ...   |
+
+Since it is just a normal query result, **the CLI can display it in different formats**.
+
+---
+
+### Why did it become a "single box"?
+
+Your second output is:
+
+```text
+┌───────────────────────────────────────────┐
+│                   teams                   │
+│                                           │
+│ yearID     smallint not null              │
+│ lgID       varchar  not null default NULL │
+│ teamID     varchar  not null              │
+│ ...                                     │
+└───────────────────────────────────────────┘
+```
+
+This is **DuckDB's "duckbox" output mode**.
+
+Instead of showing every row as a table, it displays **one record as a vertical card**.
+
+---
+
+#### Output Mode Comparison
+
+##### Table Mode
+
+```text
+column_name   column_type   null   key
+---------------------------------------
+yearID        SMALLINT      NO     PRI
+lgID          VARCHAR       NO     PRI
+teamID        VARCHAR       NO     PRI
+```
+
+Easy to read when there are many rows.
+
+---
+
+##### Duckbox Mode
+
+```text
+teams
+-----------------------------
+yearID      SMALLINT
+lgID        VARCHAR
+teamID      VARCHAR
+...
+```
+
+Easy to read when describing a single object.
+
+---
+
+### Check your current mode
+
+Run:
+
+```text
+.mode
+```
+
+It will tell you the current output mode.
+
+---
+
+### List all available modes
+
+Run:
+
+```text
+.help mode
+```
+
+or
+
+```text
+.mode ?
+```
+
+Depending on your DuckDB version.
+
+Typical modes include:
+
+```text
+duckbox
+table
+csv
+json
+markdown
+line
+ascii
+```
+
+---
+
+### Change back to table mode
+
+If you're currently in `duckbox` mode:
+
+```text
+.mode table
+```
+
+Now run:
+
+```sql
+DESCRIBE teams;
+```
+
+You'll get
+
+```text
+column_name
+column_type
+null
+key
+...
+```
+
+again.
+
+---
+
+### Change to duckbox
+
+```text
+.mode duckbox
+```
+
+Then
+
+```sql
+DESCRIBE teams;
+```
+
+becomes
+
+```text
+teams
+---------------------
+yearID ...
+lgID ...
+```
+
+---
+
+### Why does DuckDB have duckbox?
+
+Suppose you execute
+
+```sql
+SELECT *
+FROM people
+LIMIT 1;
+```
+
+Table mode:
+
+| ID | playerID | birthYear | ... |
+| -- | -------- | --------- | --- |
+
+If there are **40 columns**, it becomes unreadable.
+
+Duckbox mode instead shows:
+
+```text
+people
+
+ID          1
+playerID    aaronha01
+birthYear   1934
+birthCity   Mobile
+...
+```
+
+Much easier for wide tables.
+
+---
+
+### Internally Nothing Changed
+
+The execution pipeline is identical:
+
+```text
+SQL
+
+↓
+
+Parser
+
+↓
+
+AST
+
+↓
+
+Binder
+
+↓
+
+Logical Plan
+
+↓
+
+Physical Plan
+
+↓
+
+Result Set
+```
+
+Only the **last step** changes:
+
+```text
+Result Set
+      │
+      ▼
+CLI Renderer
+      │
+      ├── table
+      ├── duckbox
+      ├── csv
+      ├── markdown
+      └── json
+```
+
+So the SQL engine produced the **same result**; the CLI just rendered it differently.
+
+---
+
+### A Small Correction
+
+One detail in your screenshots caught my eye.
+
+The first output includes:
+
+```text
+key
+----
+PRI
+```
+
+The second output does **not** show the primary key information.
+
+This suggests something beyond just the output mode:
+
+* The **first screenshot** is the output of the SQL statement `DESCRIBE teams;`, which returns metadata including the `key` column.
+* The **second screenshot** is the output of the **CLI meta-command** `.schema teams` (or an equivalent schema display), even though you typed `DESCRIBE teams;`.
+
+These are **different commands** with different purposes:
+
+| Command                    | Type             | Shows                                                               |
+| -------------------------- | ---------------- | ------------------------------------------------------------------- |
+| `DESCRIBE teams;`          | SQL              | Column metadata (`column_name`, `column_type`, `null`, `key`, etc.) |
+| `.schema teams`            | CLI meta-command | The table definition (or a formatted schema summary)                |
+| `SHOW CREATE TABLE teams;` | SQL              | The complete `CREATE TABLE` statement                               |
+
+If `DESCRIBE teams;` is unexpectedly producing the schema-style output, I'd like to verify your environment. Could you run:
+
+```sql
+SELECT version();
+```
+
+and
+
+```text
+.mode
+```
+
+The DuckDB CLI has evolved over recent releases, and version **1.5.x** introduced some changes to the default display behavior. With the version and current output mode, we can explain exactly why you're seeing that rendering.
+
+
+
+## 2. Conflicting lock
+
+
+lahman-cmudb2025 D SELECT * FROM awardsplayers LIMIT 5
+                   
+[1]+  Stopped                 duckdb lahman-cmudb2025.db
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems/data$ duckdb lahman-cmudb2025.db
+IO Error:
+Could not set lock on file "/mnt/e/projects/database_systems/data/lahman-cmudb2025.db": Conflicting lock is held in /home/michael/.duckdb/cli/1.5.4/duckdb (PID 999). See also https://duckdb.org/docs/stable/connect/concurrency
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems/data$ 
+
+how can I start  duckdb lahman-cmudb2025.db?
+
+
+This is a **Linux job control** issue combined with **DuckDB's file locking**, not a DuckDB bug.
+
+Let's analyze what happened.
+
+---
+
+### Step 1. What happened?
+
+You executed
+
+```bash
+SELECT * FROM awardsplayers LIMIT 5
+```
+
+Then saw
+
+```bash
+[1]+ Stopped duckdb lahman-cmudb2025.db
+```
+
+This line is the important one.
+
+It means
+
+> **Your DuckDB process was not terminated. It was suspended.**
+
+Linux shells (bash, zsh, etc.) have three states for jobs:
+
+```
+Running
+Stopped
+Terminated
+```
+
+Your DuckDB process is currently
+
+```
+Stopped
+```
+
+which means
+
+* it is still alive
+* it still owns the database file
+* it still holds the file lock
+
+---
+
+### Step 2. Why can't you reopen the database?
+
+When you run
+
+```bash
+duckdb lahman-cmudb2025.db
+```
+
+DuckDB tries to obtain an exclusive lock.
+
+But the old process (PID 999) still exists.
+
+So DuckDB reports
+
+```
+Conflicting lock is held in
+
+PID 999
+```
+
+Exactly as expected.
+
+---
+
+### Step 3. Check your jobs
+
+Run
+
+```bash
+jobs
+```
+
+You'll probably see something like
+
+```bash
+[1]+ Stopped duckdb lahman-cmudb2025.db
+```
+
+---
+
+### Step 4. Option 1 (Recommended): Resume the suspended process
+
+Simply bring it back:
+
+```bash
+fg %1
+```
+
+or
+
+```bash
+fg
+```
+
+You'll return to the previous DuckDB session.
+
+No need to reopen anything.
+
+---
+
+### Step 5. Option 2: Kill it
+
+If you don't care about that session
+
+```bash
+kill %1
+```
+
+or
+
+```bash
+kill 999
+```
+
+Afterwards verify
+
+```bash
+jobs
+```
+
+returns
+
+```text
+(no jobs)
+```
+
+Now you can reopen
+
+```bash
+duckdb lahman-cmudb2025.db
+```
+
+---
+
+### Step 6. If kill doesn't work
+
+Sometimes the process ignores SIGTERM.
+
+Then
+
+```bash
+kill -9 999
+```
+
+or
+
+```bash
+pkill duckdb
+```
+
+---
+
+### Step 7. Verify the process disappeared
+
+Run
+
+```bash
+ps aux | grep duckdb
+```
+
+or
+
+```bash
+pgrep duckdb
+```
+
+No output means it's gone.
+
+---
+
+### Why was DuckDB stopped?
+
+The interesting question is:
+
+Why did
+
+```sql
+SELECT * FROM awardsplayers LIMIT 5;
+```
+
+cause
+
+```
+Stopped
+```
+
+instead of printing five rows?
+
+Normally it should not.
+
+This usually happens because the shell sent **SIGTSTP** (terminal stop signal).
+
+Common causes include:
+
+* accidentally pressing **Ctrl+Z** (most likely)
+* terminal emulator suspending the process
+* WSL terminal issue
+* VS Code integrated terminal sending Ctrl+Z
+
+Ctrl+Z does exactly this:
+
+```
+Running
+      │
+Ctrl+Z
+      ▼
+Stopped
+```
+
+and bash prints
+
+```
+[1]+ Stopped duckdb ...
+```
+
+---
+
+### Job Control Summary
+
+```
+jobs
+```
+
+List suspended/background jobs.
+
+```
+fg
+```
+
+Bring a stopped job back to the foreground.
+
+```
+bg
+```
+
+Resume it in the background.
+
+```
+kill %1
+```
+
+Terminate job 1.
+
+```
+exit
+```
+
+Quit DuckDB normally.
+
+---
+
+#### My guess
+
+Based on your output, I'm **95% confident** that you accidentally pressed **Ctrl+Z** while using DuckDB. That suspended the process, leaving it holding the database lock.
+
+Before starting a new DuckDB instance, run:
+
+```bash
+jobs
+```
+
+If you paste the output of:
+
+```bash
+jobs
+ps -ef | grep duckdb
+```
+
+I can tell you the safest way to recover your session.
