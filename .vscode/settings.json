@@ -1,7 +1,9 @@
 {
   "C_Cpp.default.compilerPath": "/usr/bin/g++",
+  // "C_Cpp.default.compilerPath": "/usr/bin/clang",
+
   //  Disable Microsoft C/C++ IntelliSense when using clangd
-  "C_Cpp.intelliSenseEngine": "Disabled",
+  "C_Cpp.intelliSenseEngine": "disabled",
 
   // === clangd for IntelliSense  === 
   "clangd.path": "/usr/bin/clangd",
@@ -29,6 +31,8 @@
   "workbench.colorTheme": "Dark+",
   "files.autoSave": "onFocusChange",
   "window.zoomLevel": 1,
+  "terminal.integrated.defaultProfile.windows": "Ubuntu",
+  
   "autoDocstring.docstringFormat": "google-notypes",
   "workbench.settings.editor": "json",
   "python.linting.enabled": true,
