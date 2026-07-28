@@ -138,6 +138,8 @@ michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ which duckdb
 # /home/michael/.duckdb/cli/latest/duckdb
 
 michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ cd data/
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ tar zxf lahman-cmudb2025.db.gz
+
 michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems/data$ ls
 # lahman-cmudb2025.db  lahman-cmudb2025.db.gz
 michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems/data$ duckdb lahman-cmudb2025.db
