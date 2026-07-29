@@ -1,5 +1,19 @@
 # 1. Open Project on WSL
 ```bash
+C:\Users\michael>wsl --version
+WSL 版本： 2.4.4.0
+内核版本： 5.15.167.4-1
+WSLg 版本： 1.0.65
+MSRDC 版本： 1.2.5620
+Direct3D 版本： 1.611.1-81528511
+DXCore 版本： 10.0.26100.1-240331-1435.ge-release
+Windows 版本： 10.0.26200.8875
+
+C:\Users\michael>wsl --update
+正在检查更新。
+正在将适用于 Linux 的 Windows 子系统更新到版本： 2.7.11。
+
+
 michael@DESKTOP-2KLOSPO MINGW64 /e/projects/database_systems (main)
 $ wsl -l -o
 $ wsl --install -d Ubuntu-24.04
@@ -9,6 +23,18 @@ $ wsl -l -v
   Ubuntu          Running         2
   Ubuntu-24.04    Stopped         2
   Ubuntu-22.04    Stopped         2
+
+michael@DESKTOP-2KLOSPO MINGW64 /e/projects/database_systems (main)
+$ wsl --set-default Ubuntu-24.04
+操作成功完成。 
+
+michael@DESKTOP-2KLOSPO MINGW64 /e/projects/database_systems (main)
+$ wsl -l
+适用于 Linux 的 Windows 子系统分发:
+Ubuntu-24.04 (默认值)
+Ubuntu-18.04
+Ubuntu
+Ubuntu-22.0
 
 
 wsl -d Ubuntu-24.04
