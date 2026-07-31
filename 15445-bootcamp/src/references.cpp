@@ -14,7 +14,12 @@
 #include <iostream>
 
 // A function that takes an int reference and adds 3 to it.
-void add_three(int &a) { a = a + 3; }
+void add_three(int &x) { x = x + 3; }
+
+int double_value(int x){
+  x *=2;
+  return x;
+}
 
 int main() {
   // Take this expression. Note that b has type int& (int reference),
@@ -24,6 +29,8 @@ int main() {
   int a = 10;
   int &b = a;
 
+  int c = 6;
+
   // As stated, if we try to print b, we will get 10.
   std::cout << "b is " << b << std::endl;
 
@@ -31,8 +38,16 @@ int main() {
   // which takes in an int reference and adds 3 to it. If we call this function,
   // on a, since a is being taken as a reference, then a's value in the caller
   // context will change value.
+  std::cout << "****Pass value by Reference "  << std::endl;
   add_three(a);
   std::cout << "a is " << a << std::endl;
+  std::cout << "b is " << b << std::endl;
+
+
+  std::cout << "*****Pass value by Copy " << std::endl;
+  std::cout << "before: c is " << c << std::endl;
+  int r =  double_value(c);
+  std::cout << "after: c is " << c << std::endl;
 
   return 0;
 }

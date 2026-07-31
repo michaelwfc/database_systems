@@ -1,9 +1,9 @@
 {
   "version": "0.2.0",
-
   "configurations": [
+    // Compiler: clang++ + Debugger: gdb
     {
-      "name": "C/C++: gcc build and debug active file",
+      "name": "C/C++: gdb debug active file",
       "type": "cppdbg",
       "request": "launch",
       "program": "${fileDirname}/${fileBasenameNoExtension}",
@@ -11,6 +11,7 @@
       "stopAtEntry": false,
       "cwd": "${fileDirname}",
       "environment": [],
+      // On WSL + VSCode Remote, sometimes GDB cannot attach a TTY.
       "externalConsole": false,
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
@@ -21,9 +22,12 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "C/C++: gcc build active file",
+      // "preLaunchTask": "C/C++: gcc build active file",
+      "preLaunchTask": "clang++ build active file",
       "targetArchitecture": "x86_64",
-      "logging": { "engineLogging": true },
+      "logging": {
+        "engineLogging": true
+      },
     }
   ]
 }

@@ -1,4 +1,36 @@
-# 1. Open Project on WSL
+# 1. C++ in WSL Ubuntu env
+
+- https://code.visualstudio.com/docs/remote/wsl
+- https://code.visualstudio.com/docs/cpp/config-wsl
+
+
+## Setup Project on WSL
+
+### Local WSL
+The architecture is:
+```bash
+Windows 11
+│
+├── VSCode Windows application
+│
+└── WSL Ubuntu-24.04
+       │
+       ├── Linux kernel
+       │
+       └── Ubuntu user space
+              │
+              └── /mnt/e
+                    |
+                    E:\ drive
+
+```
+So this is:
+✅ Local WSL
+✅ Ubuntu running locally
+✅ VSCode connected to WSL
+                    
+
+#### using WSL locally on your Windows machine.
 ```bash
 C:\Users\michael>wsl --version
 WSL 版本： 2.4.4.0
@@ -43,23 +75,94 @@ cd /mnt/e/projects/database_systems
 # This opens the current folder (/mnt/e/projects/operating_system) in VS Code, using the WSL Ubuntu-24.04 environment.
 code .
 
+# inside WSL, VSCode detects: I am inside Linux
+# and automatically installs: ~/.vscode-server/ inside Ubuntu.
+# You can verify:
+ls ~/.vscode-server
+# You will see:
+bin/
+extensions/
+# That means you are using VSCode Remote WSL.
 
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ lsb_release -a
+No LSB modules are available.
+Distributor ID: Ubuntu
+Description:    Ubuntu 24.04.4 LTS
+Release:        24.04
+Codename:       noble
 
+# current project location is not Linux filesystem. It is a Windows filesystem exposed to Linux.
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ pwd
+# /mnt/e/projects/database_systems
 
-michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ g++ --version
-# g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-# Copyright (C) 2023 Free Software Foundation, Inc.
-# This is free software; see the source for copying conditions.  There is NO
-# warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-
-michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ gdb --version
-# GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git
-# Copyright (C) 2024 Free Software Foundation, Inc.
-# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
-# This is free software: you are free to change and redistribute it.
-# There is NO WARRANTY, to the extent permitted by law.
 ```
+
+
+### VSCode Remote WSL
+VSCode Remote WSL means: The VSCode UI runs on Windows, but the VSCode backend/server runs inside WSL.
+Architecture:
+
+```bash
+Windows
+================================================
+
+VSCode UI
+   |
+   |
+   | Remote connection
+   |
+   v
+
+WSL Ubuntu
+================================================
+
+VSCode Server
+   |
+   |
+   +-- C++ extension
+   +-- clang++
+   +-- gdb
+   +-- cmake
+   +-- terminal
+```
+
+
+```bash
+# current project location is not Linux filesystem. It is a Windows filesystem exposed to Linux.
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ pwd
+# /mnt/e/projects/database_systems
+# This translation layer is slower.
+WSL Linux process
+       |
+       |
+       v
+9P filesystem protocol
+       |
+       |
+       v
+NTFS (Windows)
+
+
+# Native WSL filesystem , Your Linux filesystem is:
+# michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ echo ~
+/home/michael
+# Architecture: WSL Ubuntu
+# No Windows filesystem involved. Much faster.
+ext4 virtual disk
+        |
+        |
+        v
+
+/home/michael/projects
+
+
+cd ~/projects
+git clone <your-repository-url>
+cd database_systems
+```
+
+
+
 
 ## Update 软件源（apt 仓库）
 ```bash
@@ -96,11 +199,146 @@ sudo apt update|grep aliyun
 
 sudo apt-get update && sudo apt-get upgrade
 sudo apt install -y build-essential gcc gdb make libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev libcurl4-openssl-dev
+```
+
+### C++ Develop Packages 
+- Clang
+- Clangd
+- bear
+- clang-tidy
+- cppcheck
+- clang-format
+
+```bash
+# Install all required packages
+sudo apt install -y  clang clangd lldb ninja-build clang-tidy clang-format cppcheck gcc-doc pkg-config glibc-doc cmake libpcap-dev git bash doxygen graphviz python3-pip
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems/15445-bootcamp/build$ clang --version
+Ubuntu clang version 18.1.3 (1ubuntu1)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems/15445-bootcamp/build$ clangd --version
+Ubuntu clangd version 18.1.3 (1ubuntu1)
+Features: linux+grpc
+Platform: x86_64-pc-linux-gnu
+
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ make --version
+# GNU Make 4.3
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2020 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ cmake --version
+# cmake version 3.28.3
+
+# CMake suite maintained and supported by Kitware (kitware.com/cmake).
+
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ python3 --version
+# Python 3.12.3
+
+
+```
+### GCC compiler
+```bash
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ g++ --version
+# g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+# Copyright (C) 2023 Free Software Foundation, Inc.
+# This is free software; see the source for copying conditions.  There is NO
+# warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ whereis g++
+g++: /usr/bin/g++ /usr/share/man/man1/g++.1.gz
+
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ gdb --version
+# GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git
+# Copyright (C) 2024 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ whereis gdb
+gdb: /usr/bin/gdb /etc/gdb /usr/include/gdb /usr/share/gdb /usr/share/man/man1/gdb.1.gz
+
+```
+
+
+### Ubuntu debug packages 
+
+####  Disable debuginfod
+```bash
+nano ~/.gdbinit
+# Add:
+set debuginfod enabled off
+
+# or:
+echo 'export DEBUGINFOD_URLS=""' >> ~/.bashrc
+source ~/.bashrc
+
+```
+
+#### install dbgsym packages
+```bash
+# Ubuntu debug packages require debug repositories
+# Usually you need: the Ubuntu debug symbol repository (ddebs).
+# Check:
+cat /etc/apt/sources.list
+# You need something like:
+deb http://ddebs.ubuntu.com noble main restricted universe multiverse
+
+# Enable Ubuntu debug symbol repository
+lsb_release -a
+# Ubuntu 24.04 noble
+
+sudo apt update
+# install the key package:
+sudo apt install ubuntu-dbgsym-keyring
+
+# If successful, add the debug repository. Create:
+sudo nano /etc/apt/sources.list.d/ddebs.list
+# Add:
+deb http://ddebs.ubuntu.com noble main restricted universe multiverse
+deb http://ddebs.ubuntu.com noble-updates main restricted universe multiverse
+deb http://ddebs.ubuntu.com noble-security main restricted universe multiverse
+
+# Update package index Run:
+sudo apt update
+# You should see something like:
+# Get: ... ddebs.ubuntu.com noble/main amd64 Packages
+
+# Install libstdc++ debug symbols
+sudo apt install libstdc++6-dbgsym
+# For glibc:
+sudo apt install libc6-dbg
+
+sudo apt install gcc-13-source 
+
+# Check:
+dpkg -l | grep dbgsym
+
+
 
 
 ```
 
-## wsl operarion 
+
+
+
+
+
+
+
+
+
+
+## wsl operations 
 
 cope/paste :
 - win > ubuntu: ctrl+ c/v > right click
@@ -113,8 +351,17 @@ export HTTP_PROXY=127.0.0.1:7890
 
 
 
-# 2. WSL Vscode settings
-## Extensions
+
+# 2. Vscode settings in WSL Ubuntu env
+
+- https://code.visualstudio.com/api/advanced-topics/remote-extensions
+- https://code.visualstudio.com/docs/languages/cpp
+- https://code.visualstudio.com/docs/cpp/launch-json-reference
+- https://gourav.io/blog/setup-vscode-to-run-debug-c-cpp-code
+- https://code.visualstudio.com/docs/cpp/cpp-debug
+
+
+##  Vscode Extensions
 
 If you are using VSCode, we recommend you to install 
 - [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools), 
@@ -122,23 +369,751 @@ If you are using VSCode, we recommend you to install
 - [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd). 
 
 
-## Debug a C++ project in VS Code
+### Set Up clangd in VS Code
+
+
+
+## Vscode setting files
+- launch.json (debugger settings)
+- tasks.json (build instructions)
+- c_cpp_properties.json (compiler path and IntelliSense settings)
+
+## Debug a C++ project in VS Code for HelloWorld
 
 After that, follow this tutorial to learn how to use the visual debugger in VSCode: [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4).
 
-- c_cpp_properties.json (compiler path and IntelliSense settings)
-- tasks.json (build instructions)
-- launch.json (debugger settings)
+
+### Step1: Write Souce Code
+
+write souce code in `tutorials/hellp.cpp`
 
 
-- https://code.visualstudio.com/docs/languages/cpp
-- https://code.visualstudio.com/docs/cpp/launch-json-reference
-- https://code.visualstudio.com/docs/cpp/config-wsl
-- https://gourav.io/blog/setup-vscode-to-run-debug-c-cpp-code
-- https://code.visualstudio.com/docs/cpp/cpp-debug
-- https://code.visualstudio.com/docs/remote/wsl
-- https://code.visualstudio.com/api/advanced-topics/remote-extensions
+### Step 2: Set Debug Configuration in `.vscode/launch.json`
+
+Create/edit `.vscode/launch.json` in your project root:
+
+```json
+{
+  "version": "0.2.0",
+
+  "configurations": [
+    {
+      "name": "C/C++: gcc build and debug active file",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${fileDirname}/${fileBasenameNoExtension}",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "C/C++: gcc build active file",
+      "targetArchitecture": "x86_64",
+      "logging": { "engineLogging": true },
+    }
+  ]
+}
+```
+
+### Step 3: Set Build Task in `.vscode/tasks.json`
+
+```json
+{
+  "tasks": [
+    {
+      "type": "cppbuild",
+      "label": "C/C++: gcc build active file",
+      "command": "/usr/bin/gcc",
+      "args": [
+        "-fdiagnostics-color=always",
+        "-g",
+        "${file}",
+        "-o",
+        "${fileDirname}/${fileBasenameNoExtension}",
+        "-lpthread"
+        // "${workspaceFolder}/xv6-riscv",
+        // "-I${workspaceFolder}/xv6-riscv",
+        // "-I${workspaceFolder}/code_examples/include"
+      ],
+      "options": {
+        "cwd": "${fileDirname}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      // "detail": "Task generated by Debugger."
+      "detail": "compiler: /usr/bin/gcc"
+    }
+  ],
+  "version": "2.0.0"
+}
+
+```
+
+#### Set Build Task with make(Optional)
+
+Create `.vscode/tasks.json`:
+
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "make",
+            "args": ["-j8"],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
+```
+
+### Step 4: Set Breakpoints and Debug
+
+1. Open `tutorials/hellp.cpp`
+2. Click left margin next to line numbers to set breakpoints:
+3. Press **F5** or click "Run and Debug" → "Debug byte_stream_one_write"
+4. Use debug controls:
+   - **F10** - Step Over
+   - **F11** - Step Into
+   - **Shift+F11** - Step Out
+   - **F5** - Continue
+
+5. Inspect variables:
+   - Hover over variables
+   - Check "Variables" panel
+   - Check "Watch" panel
 
 
 
+### (Optional) cmake Build object to Debug mode
+
+```bash
+cd ~/computer_network/sponge/build
+rm -rf *
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+make -j8
+```
+
+
+
+
+-----
+
+# 15445-Bootcamp Env
+
+
+You are running into a very common C++ development environment question. Since this is **CMU 15-445/645 Database Systems Bootcamp**, it is actually a good opportunity to understand the compiler toolchain deeply.
+
+Let's go through:
+
+1. GCC vs Clang differences
+2. Why CMU recommends clang-14
+3. How CMake chooses the compiler
+4. How to switch this project to clang
+5. What changes are needed in VSCode debugging
+
+---
+
+## 1. GCC vs Clang: what are they?
+
+Both **GCC** and **Clang** are C/C++ compiler toolchains.
+
+The high-level pipeline is:
+
+```
+                 C++ Source
+                     |
+                     v
+              +--------------+
+              |   Compiler   |
+              |              |
+              |  GCC/Clang   |
+              +--------------+
+                     |
+                     v
+               Intermediate
+                Representation
+                     |
+                     v
+             Machine Code (.o)
+                     |
+                     v
+                 Linker
+                     |
+                     v
+               Executable
+```
+
+They both implement:
+
+* C++ parser
+* semantic analysis
+* optimization
+* code generation
+* linking integration
+
+But their internal architectures are different.
+
+---
+
+## 2. GCC architecture
+
+GCC = GNU Compiler Collection
+
+Originally:
+
+```
+C/C++ Code
+    |
+    v
+ GCC Frontend
+    |
+    v
+ GCC IR (GIMPLE)
+    |
+    v
+ Optimization
+    |
+    v
+ Assembly
+```
+
+GCC uses:
+
+* C frontend
+* C++ frontend
+* Fortran frontend
+* Ada frontend
+* etc.
+
+Advantages:
+
+#### 1. Very mature
+
+GCC has existed since:
+
+```
+1987
+```
+
+It is extremely stable.
+
+Linux kernel uses GCC heavily.
+
+---
+
+#### 2. Excellent optimization
+
+For production:
+
+```
+-O2
+-O3
+-march=native
+```
+
+GCC produces very competitive binaries.
+
+---
+
+#### 3. Broad architecture support
+
+Examples:
+
+* x86
+* ARM
+* RISC-V
+* PowerPC
+* SPARC
+
+Important for:
+
+* embedded systems
+* operating systems
+* hardware development
+
+---
+
+## 3. Clang architecture
+
+Clang is part of LLVM.
+
+Architecture:
+
+```
+C++ Source
+      |
+      v
++-------------+
+|   Clang     |
+|  Frontend   |
++-------------+
+      |
+      v
+ LLVM IR
+      |
+      v
+ LLVM Optimizer
+      |
+      v
+ LLVM Backend
+      |
+      v
+ Machine Code
+```
+
+LLVM is the key difference.
+
+---
+
+### Why LLVM is important
+
+LLVM provides a universal intermediate representation:
+
+```
+             C++
+              |
+             Clang
+              |
+          LLVM IR
+          /   |    \
+         /    |     \
+       x86   ARM   RISC-V
+```
+
+The same optimizer can target many CPUs.
+
+---
+
+## 4. Practical differences
+
+|                       | GCC            | Clang          |
+| --------------------- | -------------- | -------------- |
+| Origin                | GNU            | LLVM           |
+| First release         | 1987           | 2007           |
+| Backend               | GCC backend    | LLVM           |
+| Error messages        | Good           | Excellent      |
+| Compile speed         | Usually slower | Usually faster |
+| IDE integration       | Good           | Excellent      |
+| Static analysis       | Good           | Excellent      |
+| Linux support         | Excellent      | Excellent      |
+| macOS                 | Secondary      | Default        |
+| C++ standards support | Excellent      | Excellent      |
+
+---
+
+## 5. Why CMU 15-445 recommends clang-14?
+
+BusTub / 15-445 uses:
+
+```
+clang-14
+```
+
+because:
+
+### Reason 1: consistent environment
+
+The course staff tests using:
+
+```
+Ubuntu
+clang-14
+C++17
+```
+
+If students use:
+
+```
+gcc 13
+clang 18
+MSVC
+```
+
+small differences may appear.
+
+Example:
+
+```cpp
+-Werror
+```
+
+A warning in one compiler may not appear in another.
+
+---
+
+### Reason 2: better diagnostics
+
+Database projects have lots of template code.
+
+Example:
+
+```cpp
+std::vector<std::pair<int,std::string>>
+```
+
+GCC error:
+
+```
+template instantiation failed...
+```
+
+Clang:
+
+```
+candidate function not viable:
+no known conversion from ...
+```
+
+Much easier to debug.
+
+---
+
+## 6. Your current situation
+
+You ran:
+
+```
+cmake ..
+```
+
+Output:
+
+```
+The CXX compiler identification is GNU 13.3.0
+```
+
+Meaning:
+
+CMake selected:
+
+```
+/usr/bin/c++
+```
+
+which is usually:
+
+```
+g++
+```
+
+Check:
+
+```bash
+which c++
+```
+
+and:
+
+```bash
+c++ --version
+```
+
+Probably:
+
+```
+g++ 13.3.0
+```
+
+---
+
+Your clang exists:
+
+```
+clang version 18.1.3
+```
+
+but CMake does not automatically choose it.
+
+---
+
+## 7. Change CMake compiler to clang
+
+### Option 1 (recommended): clean build directory
+
+CMake caches compiler choice.
+
+Remove:
+
+```bash
+rm -rf build
+```
+
+Create again:
+
+```bash
+mkdir build
+cd build
+```
+
+Configure:
+
+```bash
+cmake .. \
+-DCMAKE_C_COMPILER=clang \
+-DCMAKE_CXX_COMPILER=clang++
+```
+
+You should see:
+
+```
+The CXX compiler identification is Clang 18.1.3
+```
+
+Then:
+
+```bash
+cmake --build .
+```
+
+---
+
+### Option 2: use environment variables
+
+Before cmake:
+
+```bash
+export CC=clang
+export CXX=clang++
+```
+
+Then:
+
+```bash
+cmake ..
+```
+
+---
+
+### Option 3: CMake toolchain file
+
+For larger projects:
+
+Create:
+
+```
+clang-toolchain.cmake
+```
+
+with:
+
+```cmake
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
+```
+
+Then:
+
+```bash
+cmake .. \
+-DCMAKE_TOOLCHAIN_FILE=clang-toolchain.cmake
+```
+
+This is how professional projects manage compilers.
+
+---
+
+## 8. Verify compiler
+
+After configuration:
+
+```bash
+grep CXX_COMPILER build/CMakeCache.txt
+```
+
+Expected:
+
+```
+CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++
+```
+
+---
+
+## 9. VSCode changes for debugging
+
+The debugger is separate from the compiler.
+
+You need:
+
+```
+Compiler
+   |
+   v
+clang++
+   |
+   v
+Executable
+   |
+   v
+gdb/lldb
+```
+
+---
+
+### Current likely setup
+
+Your `.vscode/launch.json` probably has:
+
+```json
+"miDebuggerPath": "/usr/bin/gdb"
+```
+
+This works.
+
+Clang-generated binaries can still be debugged by gdb.
+
+---
+
+### Recommended for clang
+
+Install lldb:
+
+```bash
+sudo apt install lldb
+```
+
+Check:
+
+```bash
+lldb --version
+```
+
+Then use:
+
+```json
+{
+    "name": "Debug Bootcamp",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/build/references",
+    "cwd": "${workspaceFolder}",
+    "MIMode": "lldb"
+}
+```
+
+---
+
+## 10. VSCode C++ extension configuration
+
+Your:
+
+```
+.vscode/c_cpp_properties.json
+```
+
+should use clang:
+
+```json
+{
+    "configurations": [
+        {
+            "name": "WSL",
+            "compilerPath": "/usr/bin/clang++",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}
+```
+
+This affects:
+
+* IntelliSense
+* autocomplete
+* error highlighting
+
+It does NOT affect CMake compilation.
+
+---
+
+## 11. Recommended setup for CMU 15-445
+
+For your environment:
+
+```
+Windows 11
+    |
+    |
+WSL Ubuntu
+    |
+    |
+clang-18
+    |
+    |
+CMake
+    |
+    |
+Ninja
+    |
+    |
+GDB/LLDB
+```
+
+I would use:
+
+```bash
+sudo apt install clang lldb ninja-build cmake
+```
+
+Then:
+
+```bash
+cd 15445-bootcamp
+
+rm -rf build
+
+cmake -B build \
+-G Ninja \
+-DCMAKE_C_COMPILER=clang \
+-DCMAKE_CXX_COMPILER=clang++
+
+cmake --build build
+```
+
+---
+
+## 12. One more important note for 15-445
+
+For BusTub later, you will see:
+
+```cmake
+set(CMAKE_CXX_FLAGS
+    "-Wall -Wextra -Werror"
+)
+```
+
+Clang is stricter and catches many bugs:
+
+Examples:
+
+* uninitialized variables
+* unused parameters
+* incorrect move semantics
+* lifetime issues
+
+That is why CMU prefers it. For database engine development, catching these issues early is valuable.
+
+Your current GCC 13 setup will probably compile the bootcamp, but switching to clang now will make your environment closer to the official 15-445 workflow.
 

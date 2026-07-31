@@ -15,10 +15,12 @@ to be read in depth. Each of these files can be compiled into an executable
 with the same name. Use CMake to build these executables. This set of commands
 should build all the executables. After running these commands, these executables
 should be located in the `build` directory.
-```console
+
+```bash
 $ mkdir build
 $ cd build
-$ cmake ..
+# $ cmake ..
+cmake .. -DCMAKE_TOOLCHAIN_FILE=clang-toolchain.cmake
 $ make -j8
 ```
 For instance, the `src/references.cpp` file compiles into the `references`
