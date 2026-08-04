@@ -57,8 +57,12 @@ class FooSpecial {
 };
 
 // Specialized templated class, specialized on the float type.
-template<>
-class FooSpecial<float> {
+// We provide a special version of a class template implementation for a specific template argument (float).
+// The formal name is: Full Template Specialization (or Explicit Specialization)
+// This is not a new generic template. This is a specialization. 
+// Normally: template<typename T> means: "for all types"
+template<>  // "I am replacing the implementation for a specific case."
+class FooSpecial<float> { // The special case is when T == float.
   public:
     FooSpecial(float var) : var_(var) {}
     void print() {
@@ -83,6 +87,7 @@ int main() {
   // class template is instantiated with an int template argument. This
   // would make a's type class Foo<int> instead of Foo. a's print 
   // function works as expected.
+  // For any type T, generate a class FooSpecial<T>.
   Foo<int> a(3);
   std::cout << "Calling print on Foo<int> a(3): ";
   a.print();
@@ -106,10 +111,30 @@ int main() {
   // print from d, it prints the variable and not "hello float".
   // When we call print from e, which is an instance of the
   // instantiated FooSpecial<float> class, it prints hello float!
+
+  // Compiler searches:
+  // Need FooSpecial<int>
+  // Available:
+  // 1. FooSpecial<T>       <-- matches
+  // 2. FooSpecial<float>   <-- no match
+  // Choose #1
+  // Generated: FooSpecial<int>
+  // uses: template<typename T>
   FooSpecial<int> d(5);
+
+
   std::cout << "Calling print on FooSpecial<int> d(5): ";
   d.print();
 
+  // Compiler searches:
+  // Need FooSpecial<float>
+  // Available:
+  // 1. FooSpecial<T>       <-- matches
+  // 2. FooSpecial<float>   <-- exact match
+  // Choose #2
+  // The specialized version wins.
+  // uses: template<>
+  // class FooSpecial<float>
   FooSpecial<float> e(4.5);
   std::cout << "Calling print on FooSpecial<float> e(4.5): ";
   e.print();

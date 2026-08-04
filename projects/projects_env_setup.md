@@ -9,6 +9,24 @@
 ### Local WSL
 The architecture is:
 ```bash
++------------------------------------------------+
+| Windows 11                                     |
+|                                                |
+|  +------------------------------------------+  |
+|  | WSL Ubuntu-24.04                         |  |
+|  |                                          |  |
+|  |  Linux user space                        |  |
+|  |  bash                                    |  |
+|  |  gcc/clang                               |  |
+|  |  gdb                                     |  |
+|  |  cmake                                   |  |
+|  |                                          |  |
+|  +------------------------------------------+  |
+|                                                |
++------------------------------------------------+
+
+
+The filepaht
 Windows 11
 │
 ├── VSCode Windows application
@@ -30,7 +48,7 @@ So this is:
 ✅ VSCode connected to WSL
                     
 
-#### using WSL locally on your Windows machine.
+#### using WSL with Windows filesystem
 ```bash
 C:\Users\michael>wsl --version
 WSL 版本： 2.4.4.0
@@ -99,6 +117,10 @@ michael@DESKTOP-2KLOSPO:/mnt/e/projects/database_systems$ pwd
 
 
 ### VSCode Remote WSL
+VSCode Remote WSL is a VSCode feature.
+It solves this problem:
+"I want to use Windows VSCode UI, but I want my compiler/debugger/extensions to run inside Linux."
+
 VSCode Remote WSL means: The VSCode UI runs on Windows, but the VSCode backend/server runs inside WSL.
 Architecture:
 
@@ -107,6 +129,7 @@ Windows
 ================================================
 
 VSCode UI
+(editor windows, menus, keyboard)
    |
    |
    | Remote connection
@@ -124,8 +147,40 @@ VSCode Server
    +-- gdb
    +-- cmake
    +-- terminal
+
+
+
+```
+The editor looks like Windows VSCode, but the backend runs in Linux.
+
+#### layers
+
+```bash
+Layer 4: Editor
+-----------------------------
+VSCode Remote WSL
+
+
+Layer 3: Development tools
+-----------------------------
+clang++
+gdb
+cmake
+python
+
+
+Layer 2: Linux environment
+-----------------------------
+Ubuntu 24.04
+
+
+Layer 1: Hardware
+-----------------------------
+Your Windows PC
 ```
 
+
+#### From Windows filesystem to Linux filesystem
 
 ```bash
 # current project location is not Linux filesystem. It is a Windows filesystem exposed to Linux.
@@ -158,10 +213,81 @@ ext4 virtual disk
 
 cd ~/projects
 git clone <your-repository-url>
-cd database_systems
+code database_systems
+
+
+```
+#### code database_systems from WSL trigger Remote WSL
+
+```bash
+# When you execute inside WSL:
+code database_systems
+# VSCode detects Current shell: Linux
+# Then Windows starts VSCode UI , VSCode installs VSCode Server in WSL
+# You can see:
+ls ~/.vscode-server
+# Example:
+.vscode-server/
+    bin/
+    extensions/
+
+# That server runs inside Linux.
+```
+#### other VSCode Remote modes:
+
+| Feature        | Remote machine       |
+| -------------- | -------------------- |
+| Remote WSL     | Local WSL instance   |
+| Remote SSH     | Another Linux server |
+| Dev Containers | Docker container     |
+| Codespaces     | Cloud VM             |
+```bash
+# Remote WSL
+Your PC
+ |
+ +-- Windows
+ |
+ +-- WSL Ubuntu
+
+# Remote SSH
+Your PC
+ |
+ +-- VSCode UI
+ |
+ Internet
+ |
+ +-- AWS EC2 Linux
+
+
+#  Dev Container
+Your PC
+ |
+ +-- Docker
+       |
+       +-- Ubuntu container
+
+
 ```
 
 
+#### For your CMU 15-445 setup
+
+```bash
+Windows 11
+    |
+    |
+    v
+WSL Ubuntu-24.04
+    |
+    |
+    v
+VSCode Remote WSL
+    |
+    |
+    v
+clang++ + gdb + cmake
+
+```
 
 
 ## Update 软件源（apt 仓库）

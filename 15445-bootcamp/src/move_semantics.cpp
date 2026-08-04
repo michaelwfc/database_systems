@@ -26,6 +26,7 @@
 // Includes std::cout (printing) for demo purposes.
 #include <iostream>
 // Includes the utility header for std::move.
+#include <ostream>
 #include <utility>
 // Includes the header for std::vector. We'll cover vectors more in
 // containers.cpp, but what suffices to know for now is that vectors are
@@ -59,6 +60,22 @@ void add_three_and_print(std::vector<int> &&vec) {
   std::cout << "\n";
 }
 
+
+// pass by lvalue reference for vector
+// int_array4 is lvaue, vec is alas to the same vector ,
+// The original vector changes:
+// but it can not be call by temporary vector,because A temporary has no stable identity.
+// add_three_and_print_v2(std::vector<int>{1,2,3});
+void add_three_and_print_v2(std::vector<int> &vec) {
+  
+  vec.push_back(3);
+  for (const int &item : vec) {
+    std::cout << item << " ";
+  }
+  std::cout << "\n";
+}
+
+
 int main() {
   // Take this expression. Note that 'a' is a lvalue, since it's a variable that
   // refers to a specific space in memory (where 'a' is stored). 10 is a rvalue.
@@ -70,11 +87,13 @@ int main() {
 
   // Now, we move the values of this array to another lvalue.
   std::vector<int> stealing_ints = std::move(int_array);
+  std::cout << "after std::move(), int_array size = "<< int_array.size() <<std::endl;
 
   // Rvalue references are references that refer to the data itself, as opposed
   // to a lvalue. Calling std::move on a lvalue (such as stealing_ints) will
   // result in the expression being cast to a rvalue reference.
   std::vector<int> &&rvalue_stealing_ints = std::move(stealing_ints);
+  std::cout << "after std::move(), stealing_ints size = "<< stealing_ints.size() <<std::endl;
 
   // However, note that after this, it is still possible to access the data in
   // stealing_ints, since that is the lvalue that owns the data, not
@@ -89,6 +108,7 @@ int main() {
   std::vector<int> int_array2 = {1, 2, 3, 4};
   std::cout << "Calling move_add_three_and_print...\n";
   move_add_three_and_print(std::move(int_array2));
+  std::cout << "after calling, int_array2 size = " << int_array2.size() << std::endl;
 
   // It would be unwise to try to do anything with int_array2 here. Uncomment
   // the code to try it out! (On my machine, this segfaults...) NOTE: THIS MIGHT
@@ -104,7 +124,16 @@ int main() {
   add_three_and_print(std::move(int_array3));
 
   // As seen here, we can print from this array.
+  std::cout << "after calling, int_array3 size = " << int_array3.size() << std::endl;
   std::cout << "Printing from int_array3: " << int_array3[1] << std::endl;
+
+  // pass by reference for vector
+  std::vector<int> int_array4 = {1, 2, 3, 4};
+  add_three_and_print_v2(int_array4);
+  std::cout << "after calling, int_array4 size = " << int_array4.size() << std::endl;
+  if(int_array3.size()==4){
+      std::cout << "Printing from int_array4[3]: " << int_array4[4] << std::endl;
+  }
 
   return 0;
 }

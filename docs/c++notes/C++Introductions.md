@@ -29,6 +29,7 @@ It represents a major philosophical shift:
 
 > From manual low-level programming → toward safer, expressive, zero-cost abstractions.
 
+## Modern C++ Features
 Below is a practical systems-programming-oriented overview.
 
 | Feature                          | Big Idea                                  | Description                                     | Example                          | Why Important                             | Big Shift with Old C++                          |

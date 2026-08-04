@@ -63,6 +63,7 @@ public:
   }
 
   // Move assignment operator for class Person.
+  // Why return reference instead of value?  No copy.
   Person &operator=(Person &&other) {
     std::cout << "Calling the move assignment operator for class Person.\n";
     age_ = other.age_;
@@ -71,6 +72,11 @@ public:
 
     // The moved object's validity tag is set to false.
     other.valid_ = false;
+    // Inside every non-static member function, C++ automatically provides a hidden pointer called: this
+    // It points to the current object that called the function.
+    // this is a pointer: this type is Person*
+    // The * operator dereferences the pointer. *this type is Person&
+    // *this means: The actual object pointed to by this.
     return *this;
   }
 
