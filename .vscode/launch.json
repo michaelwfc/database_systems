@@ -1,6 +1,34 @@
 {
   "version": "0.2.0",
   "configurations": [
+    {
+      "name": "debug bootcamp active file",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/15445-bootcamp/build/${fileBasenameNoExtension}",
+      "cwd": "${workspaceFolder}/15445-bootcamp",
+      "args": [],
+      "stopAtEntry": false,
+      "environment": [],
+      // On WSL + VSCode Remote, sometimes GDB cannot attach a TTY.
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "bootcamp cmake build",
+      "targetArchitecture": "x86_64",
+      "logging": {
+        "engineLogging": true
+      },
+    },
+
+
     // Compiler: clang++ + Debugger: gdb
     {
       "name": "C/C++: gdb debug active file",
@@ -28,6 +56,8 @@
       "logging": {
         "engineLogging": true
       },
-    }
+    },
+
+    
   ]
 }

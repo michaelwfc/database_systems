@@ -1,9 +1,24 @@
+15445-bootcamp/src/*
+!15445-bootcamp/src/*.cpp
+!15445-bootcamp/src/*.h
+
 data/
 backup/
 sponge/.cache
-build/
+
 # Prerequisites
 *.d
+
+# Build directories
+build/
+cmake-build-*/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
 
 # Compiled Object files
 *.slo

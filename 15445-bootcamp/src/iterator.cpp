@@ -60,18 +60,28 @@ class DLLIterator {
       : curr_(head) {}
 
     // Implementing a prefix increment operator (++iter).
+    // Increment the iterator first, then return the updated iterator.
     DLLIterator& operator++() {
+      // Why return reference?  Because we do not need a copy.
+      // no copy , faster, supports chaining
+      // "Move this iterator forward and return myself."
       curr_ = curr_->next_;
-      return *this;
+      return *this; //reference to itself
     }
 
-    // Implementing a postfix increment operator (iter++). The difference
-    // between a prefix and postfix increment operator is the return value
+    // Implementing a postfix increment operator (iter++). 
+    // Return the old iterator value first, then increment the iterator.
+    // The difference  between a prefix and postfix increment operator is the return value
     // of the operator. The prefix operator returns the result of the
     // increment, while the postfix operator returns the iterator before
     // the increment.
     DLLIterator operator++(int) {
-      DLLIterator temp = *this;
+      //Create copy:  temp is a local variable,When function returns,temp destroyed, soif Returning reference , dangling reference,Undefined behavior. 
+      // so  must return by value.
+      // Why does postfix have an int parameter?
+      // Because C++ needed a way to distinguish: ++iter from iter++
+      // "Save my old position, move myself forward, and give the caller the old position."
+      DLLIterator temp = *this; 
       ++*this;
       return temp;
     }
