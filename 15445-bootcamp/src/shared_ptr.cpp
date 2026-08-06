@@ -34,14 +34,22 @@ private:
 
 // Function that modifies a Point object inside a shared pointer
 // by passing the shared pointer argument as a reference.
+// "Give me access to the existing shared_ptr object. Do not copy it."
+// No copy. No increase of reference count.
+// std::shared_ptr<T>& -> reference to the shared_ptr object
+// function modified the original shared_ptr.
 void modify_ptr_via_ref(std::shared_ptr<Point> &point) { point->SetX(15); }
 
 // Function that modifies a Point object inside a shared pointer
 // by passing the shared pointer argument as a rvalue reference.
+// "Give me a temporary shared_ptr or an explicitly movable shared_ptr."
+// std::shared_ptr<T>&& -> reference to a shared_ptr object that caller allows moving
 void modify_ptr_via_rvalue_ref(std::shared_ptr<Point> &&point) {
   point->SetY(645);
 }
 
+
+// std::shared_ptr<T> -> copy the smart pointer and increase reference count
 void copy_shared_ptr_in_function(std::shared_ptr<Point> point) {
   std::cout << "Use count of shared pointer is " << point.use_count()
             << std::endl;
@@ -124,10 +132,18 @@ int main() {
   // reference.
   modify_ptr_via_ref(s2);
   modify_ptr_via_rvalue_ref(std::move(s2));
+  // After calling,what happens to s2?
+  // Many people expect: s2 becomes empty, But NO. 
+  // Why? Because you did not move the shared_ptr. You only passed a reference.
+  // No constructor called. No assignment. No ownership transfer.
+  
+  std::cout <<"After calling modify_ptr_via_rvalue_ref: s2.use_count = " << s2.use_count() << std::endl;
 
   // After running this code, s2 should have x = 15 and y = 645.
   std::cout << "Pointer s2 has x=" << s2->GetX() << " and y=" << s2->GetY()
             << std::endl;
+
+
 
   // Unlike unique pointers, shared pointers can also be passed by value. In
   // this case, the function contains its own copy of a shared pointer, which
@@ -145,5 +161,14 @@ int main() {
                "after calling copy_shared_ptr_in_function: "
             << s2.use_count() << std::endl;
 
+
+  std::shared_ptr<Point> s7 = std::move(s2);
+  // Now a move constructor runs. ownership transferred. No increment.
+  std::cout << "After a move constructor runs, Pointer s2 is " << (s2 ? "not empty" : "empty") << std::endl;
+  if (s2){
+    std::cout <<"After c a move constructor runs, s2.use_count = " << s2.use_count() << std::endl;
+  }
+  std::cout <<"After a move constructor runs, s7.use_count = " << s7.use_count() << std::endl;
+  
   return 0;
 }

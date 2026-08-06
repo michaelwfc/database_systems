@@ -13,8 +13,8 @@
     {
       "label": "bootcamp cmake build",
       "type": "shell",
-      // "command": "cmake --build ${workspaceFolder}/15445-bootcamp/build",
-      "command": "cmake --build ${workspaceFolder}/15445-bootcamp/build --target iterator",
+      "command": "cmake --build ${workspaceFolder}/15445-bootcamp/build",
+      // "command": "cmake --build ${workspaceFolder}/15445-bootcamp/build --target iterator",
       "dependsOn":"bootcamp cmake configure",
       "group": "build",
       "problemMatcher": []

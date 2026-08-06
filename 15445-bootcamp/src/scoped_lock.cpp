@@ -2,6 +2,32 @@
  * @file scoped_lock.cpp
  * @author Abigale Kim (abigalek)
  * @brief Tutorial code for C++ STL scoped lock.
+
+
+std::scoped_lock and std::lock_guard are both RAII-based mutex wrappers introduced in modern C++. They solve the same basic problem:
+
+Automatically lock a mutex when entering a scope and unlock it when leaving the scope.
+
+The key difference:
+
+std::lock_guard → simple, lightweight, locks one mutex (or multiple mutexes without deadlock prevention)
+std::scoped_lock → modern C++17 replacement, designed to lock multiple mutexes safely and prevent deadlocks
+
+
+Modern C++ synchronization hierarchy:
+                    mutex
+                      |
+        +-------------+-------------+
+        |                           |
+ lock_guard                  unique_lock
+        |                           |
+ simple RAII              condition_variable
+                                    
+                                    
+                 scoped_lock
+                       |
+              multiple mutex locking
+
  */
 
 // This program provides a small example of the use of std::scoped_lock.

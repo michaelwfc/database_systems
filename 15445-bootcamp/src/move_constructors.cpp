@@ -64,6 +64,7 @@ public:
 
   // Move assignment operator for class Person.
   // Why return reference instead of value?  No copy.
+  // Instead of return value, This creates a copy.
   Person &operator=(Person &&other) {
     std::cout << "Calling the move assignment operator for class Person.\n";
     age_ = other.age_;
@@ -74,9 +75,10 @@ public:
     other.valid_ = false;
     // Inside every non-static member function, C++ automatically provides a hidden pointer called: this
     // It points to the current object that called the function.
-    // this is a pointer: this type is Person*
-    // The * operator dereferences the pointer. *this type is Person&
-    // *this means: The actual object pointed to by this.
+    // The * operator dereferences the pointer.  *this means: The actual object pointed to by this.
+    // this -> &p, this is a pointer, this type is Person*
+    // *this -> p, *this type is Person&
+    // "Return the object that was assigned to, as a reference, so assignment chaining works without copying."
     return *this;
   }
 
@@ -99,6 +101,11 @@ public:
     } else {
       std::cout << "Object is invalid." << std::endl;
     }
+  }
+
+  void print(){
+    // this == &p
+    std::cout <<"Print this: " << this << std::endl;
   }
 
 private:
@@ -151,6 +158,10 @@ int main() {
   // Because the copy constructor is deleted, this code will not compile. Try
   // uncommenting this code to see the resulting compiler errors.
   // Person andy4(andy2);
+
+
+  // Print this
+  andy1.print();
 
   return 0;
 }

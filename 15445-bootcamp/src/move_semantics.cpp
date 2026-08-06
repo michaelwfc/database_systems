@@ -88,17 +88,20 @@ int main() {
   // Now, we move the values of this array to another lvalue.
   std::vector<int> stealing_ints = std::move(int_array);
   std::cout << "after std::move(), int_array size = "<< int_array.size() <<std::endl;
+  std::cout << "after std::move(), stealing_ints size = "<< stealing_ints.size() <<std::endl;
 
   // Rvalue references are references that refer to the data itself, as opposed
   // to a lvalue. Calling std::move on a lvalue (such as stealing_ints) will
   // result in the expression being cast to a rvalue reference.
   std::vector<int> &&rvalue_stealing_ints = std::move(stealing_ints);
   std::cout << "after std::move(), stealing_ints size = "<< stealing_ints.size() <<std::endl;
+  std::cout << "after std::move(), rvalue_stealing_ints size = "<< rvalue_stealing_ints.size() <<std::endl;
 
   // However, note that after this, it is still possible to access the data in
   // stealing_ints, since that is the lvalue that owns the data, not
   // rvalue_stealing_ints.
   std::cout << "Printing from stealing_ints: " << stealing_ints[1] << std::endl;
+  std::cout << "Printing from rvalue_stealing_ints: " << rvalue_stealing_ints[1] << std::endl;
 
   // It is possible to pass in a rvalue reference into a function. However,
   // once the rvalue is moved from the lvalue in the caller context to a lvalue

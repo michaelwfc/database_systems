@@ -2,6 +2,15 @@
  * @file mutex.cpp
  * @author Abigale Kim (abigalek)
  * @brief Tutorial code for C++ STL mutex.
+
+For C++ database programming:
+
+std::thread → create workers
+std::mutex → protect shared structures
+std::lock_guard → RAII-safe locking
+std::condition_variable → thread communication
+std::atomic → lightweight synchronization
+
  */
 
 // This program shows a small example of the usage of std::mutex. The
@@ -18,13 +27,19 @@
 int count = 0;
 
 // This is the syntax for declaring and default initializing a mutex.
+// A mutex (short for mutual exclusion) is a synchronization primitive that allows only one thread at a time to access a shared resource.
+// The purpose of a mutex is to prevent data races when multiple threads access and modify the same data concurrently.
+
 std::mutex m;
 
 // The add_count function allows for a thread to increment the count variable
 // by 1, atomically.
 void add_count() {
   // Acquire the lock before accessing count, the shared resource.
+
   m.lock();
+  // A mutex creates a critical section.
+  // A critical section is a piece of code where only one thread can execute at a time.
   count += 1;
   // Release the lock after accessing count, the shared resource.
   m.unlock();
