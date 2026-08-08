@@ -1,8 +1,7 @@
 {
     "recommendations": [
-        "ms-vscode.cpptools",
-        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cpptools", // C/C++ Extension， CMake Tools
+        "llvm-vs-code-extensions.vscode-clangd", // clangd
         "ms-vscode.cpptools-extension-pack",
-        "webfreak.debug"
     ]
 }

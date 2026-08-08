@@ -30,7 +30,7 @@ If you prefer to use `gdb` for debugging, there are many tutorials available to 
 
 - [Debugging Under Unix: gdb Tutorial](https://www.cs.cmu.edu/~gilpin/tutorial/)
 - [GDB Tutorial: Advanced Debugging Tips For C/C++ Programmers](http://www.techbeamers.com/how-to-use-gdb-top-debugging-tips/)
-- [Give me 15 minutes & I'll change your view of GDB](https://www.youtube.com/watch?v=PorfLSr3DDI) \[VIDEO\]
+- [Give me 15 minutes & I'll change your view of GDB](https://www.youtube.com/watch?v=PorfLSr3DDI)
 
 This is a single-person project that will be completed individually (i.e. no groups).
 
@@ -39,6 +39,7 @@ This is a single-person project that will be completed individually (i.e. no gro
 
 # Project Specification
 
+## Count-min sketch
 Consider the following scenario: you are the administrator of a popular blog website, and you've been receiving reports on certain accounting spamming excessively. To map out overall network usage and detect potential DDoS attacks, you want a real-time approach to count how often each IP address appears in the incoming request stream. However, the stream is huge, which makes traditional data structures either too slow or too memory-hungry. This is where the **Count–Min Sketch** comes in!
 
 [Count-min sketch](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) (CM Sketch) is a [probablistic](https://en.wikipedia.org/wiki/Randomized_algorithm) data structure that approximates frequency counts of items in a stream using sublinear memory. It maintains a compact 2-dimensional array of counters addressed by d independently seeded hash functions. Each update increments one cell per row, and a query returns the minimum of those counters. Moreover, count-min sketch is mergeable, meaning that the sum of two sketches is equivalent to constructing a single sketch over the concatenation of the corresponding input streams. Count-min sketch is widely used for network traffic monitoring, streaming analytics, and database system optimization.
@@ -290,3 +291,878 @@ CMU students should use the Gradescope course code announced on Piazza.
 - Students are allowed to use generative AI to help with development but they are ultimately responsible for their work.
 
 **WARNING:** All of the code for this project must be your own. You may not copy source code from other students or other sources that you find on the web. Plagiarism **will not** be tolerated. See CMU's [Policy on Academic Integrity](https://www.cmu.edu/policies/student-and-student-life/academic-integrity.html) for additional information.
+
+
+# QA 
+## 1. What is Count-min sketch?
+
+Count–Min Sketch is a **probabilistic frequency estimation data structure** used to answer:
+
+> "How many times has this item appeared in a huge data stream?"
+
+Examples:
+
+- How many requests came from each IP address?
+- How many times was a search keyword used?
+- What are the most frequent products clicked?
+- How many times did a network packet source appear?
+
+The challenge is that the stream may contain **billions of events**, and storing an exact counter for every unique item may require too much memory.
+
+A Count–Min Sketch trades **accuracy for memory efficiency**.
+
+---
+
+### 1. Motivation: Why do we need CMS?
+
+Imagine a website receives:
+
+```
+GET /index.html from 192.168.1.10
+GET /login from 10.0.0.5
+GET /api from 192.168.1.10
+...
+```
+
+You want:
+
+```
+192.168.1.10 -> 10,000,000 requests
+10.0.0.5     -> 500 requests
+...
+```
+
+The normal solution:
+
+```cpp
+unordered_map<string, uint64_t> counter;
+```
+
+Example:
+
+```
+IP Address        Count
+-------------------------
+192.168.1.10      10000000
+10.0.0.5          500
+8.8.8.8           200
+```
+
+Problem:
+
+Suppose:
+
+```
+10 billion requests
+1 billion unique IPs
+```
+
+The hash table needs:
+
+```
+1 billion entries
+```
+
+Memory:
+
+```
+key string
+hash table overhead
+counter
+pointer
+allocator metadata
+```
+
+Could easily require hundreds of GB.
+
+For monitoring systems, we often only need:
+
+> "Approximately how many times did this happen?"
+
+That is where CMS helps.
+
+---
+
+### 2. Core Idea
+
+Instead of storing:
+
+```
+IP -> count
+```
+
+CMS stores:
+
+```
+small integer matrix
+```
+
+Example:
+
+```
+        columns
+       0 1 2 3 4
+
+row0   0 0 0 0 0
+row1   0 0 0 0 0
+row2   0 0 0 0 0
+```
+
+This is:
+
+```
+depth = 3
+width = 5
+```
+
+Meaning:
+
+- 3 independent hash functions
+- each hash chooses a column
+
+
+---
+
+### 3. Update Operation
+
+When an item arrives:
+
+```
+item = "192.168.1.10"
+```
+
+We calculate:
+
+```
+hash1(item) % width
+hash2(item) % width
+hash3(item) % width
+```
+
+Suppose:
+
+```
+hash1 -> column 2
+hash2 -> column 4
+hash3 -> column 1
+```
+
+Increment:
+
+```
+row0,col2++
+row1,col4++
+row2,col1++
+```
+
+Before:
+
+```
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+```
+
+After:
+
+```
+0 0 1 0 0
+0 0 0 0 1
+0 1 0 0 0
+```
+
+---
+
+### 4. Query Operation
+
+Question:
+
+```
+How many times did "192.168.1.10" appear?
+```
+
+We calculate the same hashes:
+
+```
+hash1 -> col2
+hash2 -> col4
+hash3 -> col1
+```
+
+Read:
+
+```
+row0,col2 = 1
+row1,col4 = 1
+row2,col1 = 1
+```
+
+Return:
+
+```
+min(1,1,1)=1
+```
+
+---
+
+### 5. Why Use Minimum?
+
+The key property:
+
+#### CMS never underestimates
+
+The answer is always:
+
+```
+estimated count >= true count
+```
+
+Why?
+
+
+Suppose two IPs collide.
+
+Example:
+
+```
+IP A
+hash1 -> column 2
+
+
+IP B
+hash1 -> column 2
+```
+
+Matrix:
+
+```
+row0:
+
+col0 col1 col2 col3
+
+ 0    0    2    0
+```
+
+The counter becomes:
+
+```
+A count + B count
+```
+
+So:
+
+```
+stored count = true count + collision noise
+```
+
+The value can only increase.
+
+Therefore:
+
+```
+CMS error is positive
+```
+
+---
+
+#### Why minimum helps
+
+Suppose:
+
+```
+depth=3
+```
+
+For an item:
+
+```
+row0 counter = 100  (many collisions)
+row1 counter = 12
+row2 counter = 15
+```
+
+The real frequency is probably close to:
+
+```
+12
+```
+
+because fewer collisions happened there.
+
+So:
+
+```
+estimate=min(100,12,15)
+
+=12
+```
+
+---
+
+### 6. Accuracy Guarantees
+
+The original paper gives:
+
+For width:
+
+\[
+w=\frac{e}{\epsilon}
+\]
+
+For depth:
+
+\[
+d=ln(\frac1\delta)
+\]
+
+
+where:
+
+| Parameter | Meaning |
+|-|-|
+| ε | error tolerance |
+| δ | failure probability |
+
+
+Guarantee: 
+\[estimate \le true\_count+\epsilon N \]
+
+
+with probability:
+\[1-\delta\]
+
+Example:
+
+Stream size:
+
+```
+N = 1,000,000,000
+```
+
+Choose:
+
+```
+ε = 0.001
+δ = 0.01
+```
+
+Maximum error:
+
+```
+εN
+
+=1,000,000
+```
+
+Meaning:
+
+A real count:
+
+```
+10,000,000
+```
+
+may become:
+
+```
+10,800,000
+```
+
+but never:
+
+```
+9,000,000
+```
+
+---
+
+### 7. Complexity
+
+#### Update
+
+Need:
+
+```
+d hash calculations
+```
+
+Time:
+
+\[
+O(d)
+\]
+
+
+Usually:
+
+```
+d = 3~10
+```
+
+so effectively constant.
+
+
+---
+
+#### Query
+
+Same:
+
+```
+read d counters
+take minimum
+```
+
+Time:
+
+\[
+O(d)
+\]
+
+
+---
+
+#### Memory
+
+Matrix:
+
+```
+width × depth counters
+```
+
+Example:
+
+```
+width = 1,000,000
+depth = 5
+```
+
+Counters:
+
+```
+5 million
+```
+
+Using uint32:
+
+```
+5M × 4 bytes
+
+=20 MB
+```
+
+Compare:
+
+HashMap:
+
+```
+millions of keys
+hundreds of MB or GB
+```
+
+---
+
+### 8. Collision Example
+
+Suppose:
+
+```
+width=4
+depth=3
+```
+
+Items:
+
+```
+A
+B
+C
+```
+
+Hash:
+
+```
+        row0 row1 row2
+
+A        1    2    0
+B        1    3    2
+C        0    2    2
+```
+
+After insertion:
+
+```
+row0:
+
+0 2 0 0
+
+
+row1:
+
+0 0 2 1
+
+
+row2:
+
+1 0 2 0
+```
+
+Query A:
+
+```
+row0 col1 =2
+row1 col2 =2
+row2 col0 =1
+```
+
+Answer:
+
+```
+min(2,2,1)
+
+=1
+```
+
+Correct.
+
+---
+
+### 9. Mergeability
+
+This is one of CMS's most powerful properties.
+
+Suppose:
+
+Server A:
+
+```
+CMS_A
+```
+
+tracks:
+
+```
+requests in Asia
+```
+
+Server B:
+
+```
+CMS_B
+```
+
+tracks:
+
+```
+requests in Europe
+```
+
+You can merge:
+
+```
+CMS_total = CMS_A + CMS_B
+```
+
+Matrix addition:
+
+```
+CMS_A
+
+1 2
+3 4
+
+
+CMS_B
+
+5 6
+7 8
+
+
+=
+
+6 8
+10 12
+```
+
+The result is equivalent to processing:
+
+```
+Asia stream + Europe stream
+```
+
+This makes CMS excellent for distributed systems.
+
+---
+
+### 10. CMS vs Other Streaming Structures
+
+| Data Structure | Purpose | Memory | Accuracy |
+|-|-|-|-|
+| HashMap | exact counts | huge | exact |
+| Bloom Filter | membership | tiny | false positive |
+| Count-Min Sketch | frequency | tiny | overestimate |
+| HyperLogLog | cardinality | tiny | approximate unique count |
+| Top-K Sketch | frequent items | tiny | approximate ranking |
+
+---
+
+### 11. Real Production Uses
+
+#### Network Monitoring
+
+Example:
+
+```
+IP -> request count
+```
+
+Detect:
+
+```
+192.168.1.1 : 500M requests
+```
+
+Possible DDoS.
+
+Used in:
+
+- routers
+- IDS systems
+- telemetry
+
+
+---
+
+#### Database Query Optimization
+
+Modern databases maintain approximate statistics.
+
+Example:
+
+```
+SELECT *
+FROM orders
+WHERE customer_id=123;
+```
+
+Optimizer asks:
+
+```
+How many rows match?
+```
+
+Exact counting is expensive.
+
+Approximate sketches help estimate cardinality.
+
+---
+
+#### Search Engines
+
+Track:
+
+```
+keyword -> frequency
+```
+
+Example:
+
+```
+"iphone" -> billions
+"rare term" -> few
+```
+
+---
+
+#### Cache Systems
+
+Estimate:
+
+```
+which objects are hot?
+```
+
+Used for:
+
+- admission policies
+- LFU caches
+
+
+---
+
+### 12. Implementation View
+
+A simple CMS:
+
+```cpp
+class CountMinSketch {
+public:
+
+    CountMinSketch(
+        size_t width,
+        size_t depth
+    )
+        :
+        table(depth,
+              vector<uint64_t>(width,0))
+    {}
+
+    void add(string key)
+    {
+        for(size_t i=0;i<depth;i++)
+        {
+            auto col =
+              hash(key,i)%width;
+
+            table[i][col]++;
+        }
+    }
+
+
+    uint64_t estimate(string key)
+    {
+        uint64_t result = UINT64_MAX;
+
+        for(size_t i=0;i<depth;i++)
+        {
+            auto col =
+              hash(key,i)%width;
+
+            result =
+              min(result,
+                  table[i][col]);
+        }
+
+        return result;
+    }
+
+
+private:
+
+    vector<vector<uint64_t>> table;
+};
+```
+
+---
+
+### 13. Important Engineering Details
+
+#### Counter Overflow
+
+Counters can overflow:
+
+```
+uint32_t
+
+max:
+4,294,967,295
+```
+
+Solutions:
+
+- use uint64
+- saturating counters
+- periodic decay
+
+
+---
+
+#### Hash Quality
+
+Bad hash:
+
+```
+many collisions
+```
+
+causes:
+
+```
+large estimation error
+```
+
+Common choices:
+
+- MurmurHash
+- xxHash
+- CityHash
+
+
+---
+
+#### Choosing Width and Depth
+
+Tradeoff:
+
+```
+More memory
+       |
+       v
+Lower error
+```
+
+Typical:
+
+```
+depth = 5
+
+width:
+millions
+```
+
+---
+
+### 14. Mental Model
+
+Think of CMS as:
+
+```
+A compressed collection of counters
+```
+
+Instead of:
+
+```
+IP address
+      |
+      v
+ exact counter
+```
+
+CMS does:
+
+```
+IP address
+      |
+      |
+   hash functions
+      |
+      v
+
++----------------+
+| counter matrix |
++----------------+
+
+```
+
+You lose identity information but keep frequency information.
+
+---
+
+### Summary
+
+| Concept | Explanation |
+|-|-|
+| What is CMS? | Approximate frequency counter |
+| Main idea | Hash items into a small counter matrix |
+| Update | Increment one counter per hash row |
+| Query | Take minimum counter |
+| Error | Only overestimates |
+| Time | O(depth) |
+| Memory | O(width × depth) |
+| Best for | Huge streams where exact counting is impossible |
+| Key property | Mergeable distributed counting |
+
+The core intuition:
+
+> **Count-Min Sketch sacrifices exactness of individual counters in exchange for enormous memory savings while guaranteeing that counts are never underestimated.**
