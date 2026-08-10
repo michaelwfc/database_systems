@@ -1243,3 +1243,139 @@ That is why CMU prefers it. For database engine development, catching these issu
 
 Your current GCC 13 setup will probably compile the bootcamp, but switching to clang now will make your environment closer to the official 15-445 workflow.
 
+
+# Setting Up Dev Environment for Labs
+
+## Creating Your Own Project Repository
+
+If the below `git` concepts (e.g., repository, merge, pull, fork) do not make sense to you, please spend some time [learning git](https://guides.github.com/introduction/git-handbook/) first.
+
+Follow the [instructions](https://github.com/cmu-db/bustub#cloning-this-repository) to setup your own PRIVATE repository and your own development branch. If you have previuosly forked the repository through the GitHub UI (by clicking Fork), PLEASE DO NOT PUSH ANY CODE TO YOUR PUBLIC FORKED REPOSITORY! Make sure your repository is PRIVATE before you `git push` any of your code.
+
+If the instructor makes any changes to the code, you can merge the changes to your code by keeping your private repository connected to the CMU-DB master repository. Execute the following commands to add a remote source:
+
+```
+$ git remote add public https://github.com/cmu-db/bustub.git
+```
+
+You can then pull down the latest changes as needed during the semester:
+
+```
+$ git fetch public
+$ git merge public/master
+```
+
+
+## Setting Up Your Development Environment
+
+First install the packages that BusTub requires:
+
+```
+# Linux
+$ sudo build_support/packages.sh
+# macOS
+$ build_support/packages.sh
+```
+
+See the [README](https://github.com/cmu-db/bustub/blob/master/README.md) for additional information on how to setup different OS environments.
+
+To build the system from the commandline, execute the following commands:
+
+```
+$ mkdir build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=Debug ..
+$ make -j\`nproc\`
+```
+
+We recommend always configuring CMake in debug mode. This will enable you to output debug messages and check for memory leaks (more on this in below sections).
+
+## Testing
+
+You can test the individual components of this assignment using our testing framework. We use [GTest](https://github.com/google/googletest) for unit test cases. You can disable tests in GTest by adding a `DISABLED_` prefix to the test name. To run the tests from the command-line:
+
+```
+$ cd build
+$ make -j$(nproc) count_min_sketch_test
+$ ./test/count_min_sketch_test
+```
+
+In this project, there are no hidden tests. In the future, the provided tests in the starter code are only a subset of the all the tests that we will use to evaluate and grade your project. You should write additional test cases on your own to check the complete functionality of your implementation.
+
+Make sure that you remove the DISABLED\_ prefix from the test names otherwise they will **not** run!
+
+## Formatting
+
+Your code must follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). We use [Clang](https://clang.llvm.org/) to automatically check the quality of your source code. Your project grade will be **zero** if your submission fails any of these checks.
+
+Execute the following commands to check your syntax. The `format` target will automatically correct your code. The `check-lint` and `check-clang-tidy` targets will print errors that you must manually fix to conform to our style guide.
+
+```
+$ make format
+$ make check-clang-tidy-p0
+```
+
+## Memory Leaks
+
+For this project, we use [LLVM Address Sanitizer (ASAN) and Leak Sanitizer (LSAN)](https://clang.llvm.org/docs/AddressSanitizer.html) to check for memory errors. To enable ASAN and LSAN, configure CMake in debug mode and run tests as you normally would. If there is memory error, you will see a memory error report. Note that macOS **only supports address sanitizer without leak sanitizer**.
+
+In some cases, address sanitizer might affect the usability of the debugger. In this case, you might need to disable all sanitizers by configuring the CMake project with:
+
+```
+$ cmake -DCMAKE_BUILD_TYPE=Debug -DBUSTUB_SANITIZER= ..
+```
+
+## Development Hints
+
+You can use `BUSTUB_ASSERT` for assertions in debug mode. Note that the statements within `BUSTUB_ASSERT` will NOT be executed in release mode. If you have something to assert in all cases, use `BUSTUB_ENSURE` instead.
+
+We will test your implementation in release mode. To compile your solution in release mode,
+
+```
+$ mkdir build_rel && cd build_rel
+$ cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+Post all of your questions about this project on Piazza. Do **not** email the TAs directly with questions.
+
+TAs will **not** look into your code or help you debug in this project.
+
+## Grading Rubric
+
+In order to pass this project, you must ensure your code follows the following guidelines:
+
+1. Does the submission successfully execute all of the test cases and produce the correct answer?
+2. Does the submission execute without any memory leaks?
+3. Does the submission follow the code formatting and style policies?
+
+Note that we will use additional test cases to grade your submission that are more complex than the sample test cases that we provide you in future projects.
+
+## Late Policy
+
+There are no late days for this project.
+
+## Submission
+
+You will submit your implementation to Gradescope:
+
+- **[https://www.gradescope.com/courses/1074751](https://www.gradescope.com/courses/1074751)**
+
+Run this command in `build` directory and it will create a `zip` archive called `project0-submission.zip` that you can submit to Gradescope.
+
+```
+$ make submit-p0
+```
+
+Although you are allowed submit your answers as many times as you like, you should **not** treat Gradescope as your only debugging tool. Most students submit their projects near the deadline, and thus Gradescope will take longer to process the requests. You may not get feedback in a timely manner to help you debug problems. Furthermore, the output from Gradescope is unlikely to be as informative as the output from a debugger (like `gdb`), provided you invest some time in learning to use it.
+
+CMU students should use the Gradescope course code announced on Piazza.
+
+## Collaboration Policy
+
+- Every student must work individually on this assignment.
+- Students are allowed to discuss high-level details about the project with others.
+- Students are **not** allowed to copy the contents of a white-board after a group meeting with other students.
+- Students are **not** allowed to copy solutions from another person.
+- Students are allowed to use generative AI to help with development but they are ultimately responsible for their work.
+
+**WARNING:** All of the code for this project must be your own. You may not copy source code from other students or other sources that you find on the web. Plagiarism **will not** be tolerated. See CMU's [Policy on Academic Integrity](https://www.cmu.edu/policies/student-and-student-life/academic-integrity.html) for additional information.

@@ -159,24 +159,7 @@ Feel free to design your helper functions to assist with the implementation.
 - The test suite includes parallel tests. However, **we ONLY expect thread-safe implementation for `Insert(item)`**. In other words, your implementation must correctly handle scenarios where multiple threads simultaneously perform insertions into multiple count-min sketches.
 - You may notice the last test compares the performance of your implementation for `Insert(item)` against one that is strictly sequential. **You could only pass this test if the relative speedup of your implementation is larger than `1.2`. We expect you NOT to use only a single global latch to guard the whole data structure.** If you do so, the contention ratio will be effectively around `1.0`. There are many ways to do this. As a hint, try thinking of ways to break down the latch granularity or, even better, not to use a latch at all (you may find [compare\_exchange](https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange.html) helpful if you aim for the latter). If you find this difficult to reason about, try passing other tests with a global latch first before attempting to optimize for this one.
 
-## Creating Your Own Project Repository
 
-If the below `git` concepts (e.g., repository, merge, pull, fork) do not make sense to you, please spend some time [learning git](https://guides.github.com/introduction/git-handbook/) first.
-
-Follow the [instructions](https://github.com/cmu-db/bustub#cloning-this-repository) to setup your own PRIVATE repository and your own development branch. If you have previuosly forked the repository through the GitHub UI (by clicking Fork), PLEASE DO NOT PUSH ANY CODE TO YOUR PUBLIC FORKED REPOSITORY! Make sure your repository is PRIVATE before you `git push` any of your code.
-
-If the instructor makes any changes to the code, you can merge the changes to your code by keeping your private repository connected to the CMU-DB master repository. Execute the following commands to add a remote source:
-
-```
-$ git remote add public https://github.com/cmu-db/bustub.git
-```
-
-You can then pull down the latest changes as needed during the semester:
-
-```
-$ git fetch public
-$ git merge public/master
-```
 
 ## Setting Up Your Development Environment
 
