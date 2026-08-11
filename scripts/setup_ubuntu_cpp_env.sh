@@ -229,7 +229,16 @@ echo "------ git ------"
 git --version
 
 
+####  Disable debuginfod
+echo 'export DEBUGINFOD_URLS=""' >> ~/.bashrc
+source ~/.bashrc
+echo "Disable debuginfod"
+
+
 echo
 echo "=========================================="
 echo "Ubuntu C/C++ environment setup finished!"
 echo "=========================================="
+
+
+
