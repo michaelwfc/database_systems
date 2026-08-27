@@ -1,7 +1,8 @@
 15445-bootcamp/src/*
 !15445-bootcamp/src/*.cpp
 !15445-bootcamp/src/*.h
-
+*.pdf
+algo/
 data/
 backup/
 sponge/.cache
@@ -58,3 +59,5 @@ Makefile
 
 # debug information files
 *.dwo
+__pycache__/
+*.egg-info
