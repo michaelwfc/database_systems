@@ -305,24 +305,7 @@ def pdf_to_markdown(pdf_path: str) -> str:
     return "\n\n---\n\n".join(pages_md)
 
 
-def convert_pdf_to_markdown(
-    input_pdf: str,
-    out_path :str | None = None
-):
-    """
-    Convert PDF file to Markdown file.
 
-    This is the public API used by cli.py.
-    """
-
-    md = pdf_to_markdown(input_pdf)
-
-    if out_path is None:
-        out_path = str(Path(input_pdf).with_suffix(".md"))
-    Path(out_path).write_text(
-        md,
-        encoding="utf-8"
-    )
     
 
 if __name__ == "__main__":
