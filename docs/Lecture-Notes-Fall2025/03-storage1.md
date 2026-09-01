@@ -155,7 +155,7 @@ A page is a fixed-size block of data.
 
 Pages can contain different kinds of data (tuples, indexes, etc). Most systems will not mix these types within pages. Some systems will require that pages are self-contained , meaning that all the information needed to read each page is on the page itself.
 
-#### page ID
+#### Page ID
 Each page is given a unique identifier (**page ID**). 
 
 If the database is a single file, then the page id can just be the file offset. 
@@ -189,27 +189,77 @@ Optimal database page size depends on the environment, database contents, and ex
 
 
 ### **8** **Page Storage Architecture/Database Heap**
+storage hierarchy:
+SQL
+ ↓
+Table
+ ↓
+Pages
+ ↓
+Disk blocks
+
+
+#### Target:
+
+Given a table, how do we physically organize its pages and tuples on disk so that we can find, insert, delete, and scan records?
+
+
+#### Different Page Storage Architecture
 
 Different DBMSs manage pages in files on disk in different ways.
-→ Heap File Organization
-→ Tree File Organization
-→ Sequential / Sorted File Organization (ISAM)
-→ Hashing File Organization
+→ Heap File Organization → no ordering
+→ Tree File Organization → organized as a search tree
+→ Sequential / Sorted File Organization (ISAM)  → ordered
+→ Hashing File Organization → organized by hash(key)
 
 A heap file is an unordered collection of pages where tuples are stored in random order.
 
 A common architecture for the DBMS to locate a page on disk given a page id is page directory , which are special pages that contain one location entry for each logical database objects (e.g. data pages, index pages). The page directory has to be synchronized with the actual pages. The DBMS also tracks metadata about pages’ contents, include the amount of free space on each page, a list of free/empty pages, and the page types.
 
 #### Heap File Organization
-A heap file is an unordered collection of pages with tuples that are stored in random order.
+A heap file is an **unordered** collection of pages with tuples that are stored in random order.
 → Create / Get / Write / Delete Page
 → Must also support iterating over all pages.
 
 Need additional meta-data to track location of files and free space availability. 
 
-#### HEAP FILE: PAGE DIRECTORY
+The word heap here does not mean the heap data structure from algorithms.
+It means: There is no ordering requirement for the tuples.
+
+#### Page Dierectory
+
+
+- Heap file = unordered collection of pages containing tuples.
+- Page directory / metadata = helps the DBMS find pages and determine where free space is available.
+- Buffer pool = caches those pages in RAM; it sits between the execution/storage layer and the disk.
+
+```
+SQL
+ ↓
+Executor
+ ↓
+Buffer Pool
+ ↓
+Heap File / Page Directory
+ ↓
+Disk
+
+```
+
 ![image](../../images/storage/HEAP_FILE_PAGE_DIRECTORY_01.png)
 
+```
+              Page Directory
+┌─────────────────────────────────────┐
+│ Page ID │ File │ Offset │ FreeSpace │
+├─────────┼──────┼────────┼───────────┤
+│    0    │ F1   │   ...  │   120 B   │
+│    1    │ F1   │   ...  │   800 B   │
+│    2    │ F2   │   ...  │    20 B   │
+│    3    │ F1   │   ...  │  4000 B   │
+└─────────────────────────────────────┘
+
+```
 The DBMS maintains special pages that tracks the location of data pages in the database files.
 → One entry per database object.
 → Must make sure that the directory pages are in sync with the data pages.
@@ -218,6 +268,160 @@ DBMS also keeps meta-data about pages' contents:
 → Amount of free space per page.
 → List of free / empty pages.
 → Page type (data vs. meta-data).
+
+```
+                         DBMS
+                          │
+                          ↓
+                    Table: Employee
+                          │
+                          ↓
+                    Heap File
+                          │
+          ┌───────────────┼───────────────┐
+          ↓               ↓               ↓
+       Page 0           Page 1          Page 2
+          │               │               │
+       tuples          tuples          tuples
+          │               │               │
+          └───────────────┼───────────────┘
+                          │
+                          ↓
+                  Page Directory
+                          │
+             ┌────────────┼────────────┐
+             ↓            ↓            ↓
+          location     free space    page type
+             │
+             ↓
+          File/Disk
+```
+The important relationship is:
+Heap file = pages containing tuples + metadata needed to manage those pages.
+
+
+#### Heap File + Index
+The page directory answers something like:
+"Where is Page 42 physically located, and how much free space does it have?"
+The index answers:
+"Which page contains the tuple whose key is 123?"
+
+
+##### Why is Heap File Organization so common?
+
+Because it's simple and flexible.
+
+You don't need to maintain ordering when inserting.
+
+INSERT
+  ↓
+find page with enough space
+  ↓
+put tuple there
+
+No need to shift records to preserve ordering.
+
+This makes heap files particularly suitable as the basic storage layer for general-purpose tables.
+
+The downside:
+
+```SQL
+SELECT *
+FROM employee
+WHERE employee_id = 12345;
+```
+with no index may require:
+
+Page 0 → check
+Page 1 → check
+Page 2 → check
+...
+Page N → check
+
+That's an O(N) page scan.
+
+This is precisely why we later introduce indexes.
+
+##### The relationship of Heap File + Index 
+
+
+```
+                  Query
+                    │
+                    ↓
+            employee_id = 123
+                    │
+             ┌──────┴──────┐
+             ↓             ↓
+          Index           Heap
+             │             │
+        find tuple         │
+             │             │
+             └──────→ Page 42
+                          │
+                          ↓
+                        Tuple
+
+
+The index might be a B+ tree:
+                 Root
+                  │
+            ┌─────┴─────┐
+            ↓           ↓
+        Internal      Internal
+          nodes         nodes
+             \          /
+              ↓        ↓
+                 Leaf
+                   │
+                   ↓
+              key = 123
+                   │
+                   ↓
+               RID / TID
+The leaf entry might conceptually contain: (id, RID), ex: (123, (page_id=42, slot=7))
+
+So the DBMS does:
+               SQL  
+                 ↓
+              Query Optimizer
+                ↓
+              WHERE id = 123
+                ↓
+              Index: B+ Tree
+                ↓
+              search for 123
+                ↓
+              RID = (42, 7) 
+                ↓
+    ┌───────────┴───────────┐
+Page ID=42               Slot ID=7      
+    ↓
+BufferPool.GetPage(42)
+    ↓
+Page 42
+    ↓
+Disk/File
+                ↓
+               Tuple
+
+
+```
+
+The heap file is still where the actual tuples live.
+
+The index provides a shortcut to locate them.  The index maps the logical search key to the physical tuple location.
+
+This is a fundamental DBMS architecture:
+
+A SQL predicate tells the optimizer what data is wanted; 
+index = access path. an access path tells the DBMS where to find it; 
+Heap file = data storage; an RID identifies the page and slot; 
+the buffer pool fetches that page.
+
+
+----
+
 
 ### **9** **Page Layout**
 
@@ -247,40 +451,69 @@ There are three main approaches to laying out data in pages:
 (2) log-structured, 
 (3) index-oriented.
 
-##### Tuple-Oriented Storage
+##### 1. Tuple-Oriented Storage
 
 In tuple-oriented storage, the entire tuple is stored in the page. 
 
-A strawman approach: 
+###### A strawman approach: 
 to laying out tuples in a page is to keep track of how many tuples the DBMS has stored in the page and then append to the end every time a new tuple is added. 
 
 However, problems arise when tuples are deleted or when tuples have variable-length attributes. 
 
-##### Slotted Pages
+###### Slotted Pages
 A common layout scheme that solves this is slotted pages .
+The page itself needs to know how to find the tuple from the slot number.
 
 ![image](../../images/storage/Slotted_Pages_01.png)
 
-
+```
+For example: 
+Page 42
+┌──────────────────────────────┐
+│ Page Header                  │
+├──────────────────────────────┤
+│ Slot 0 → offset 3800         │
+│ Slot 1 → offset 3650         │
+│ Slot 2 → offset 3500         │
+│ Slot 3 → offset 3200         │
+│ ...                          │
+├──────────────────────────────┤
+│                              │
+│       free space             │
+│                              │
+├──────────────────────────────┤
+│ Tuple                        │
+│ Tuple                        │
+│ Tuple                        │
+└──────────────────────────────┘
+```
 **Slotted Pages:** Page maps slots to offsets.
 
 - Most common approach used in DBMSs today.
 
-- Header keeps track of the number of used slots, the offset of the starting location of the last used
+- Header keeps track 
+  - the number of used slots
+  - the offset of the starting location of the last used slot
 
-slot, and a slot array, which keeps track of the location of the start of each tuple.
+- A slot array
+  - which keeps track of the location of the start of each tuple.
+  - The slot array maps "slots" to the tuples' starting position offsets.
 
-- To add a tuple, the slot array will grow from the beginning to the end, and the data of the tuples will
+To add a tuple
+- the slot array will grow from the beginning to the end, and 
+- the data of the tuples will grow from end to the beginning. 
+- The page is considered full when the slot array and the tuple data meet.
 
-grow from end to the beginning. The page is considered full when the slot array and the tuple data
 
-meet.
 
-Log-structured and index-oriented storage are covered in lecture 05.
 
-### **10** **Record IDs**
+
+##### 2. Log-structured(in lecture 05)
+##### 3. index-oriented storage(in lecture 05).
+
+### **10** **Record IDs(RID)**
 The DBMS assigns each logical tuple a unique record identifier that represents its physical location in the database.
-→ Example: File Id, Page Id, Slot #
+→ Example: `File Id, Page Id, Slot #`
 → Most DBMSs do not store ids in tuple.
 → SQLite uses ROWID as the true primary key and stores them as a hidden attribute.
 
