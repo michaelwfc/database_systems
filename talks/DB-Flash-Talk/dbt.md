@@ -599,11 +599,7 @@ which is one of its biggest enterprise features.
 
 dbt itself **doesn't execute SQL**.
 
-Instead
-
-it sends SQL
-
-to
+Instead it sends SQL to
 
 ```text
 Snowflake
@@ -991,11 +987,7 @@ Executives
 
 ---
 
-It expects
-
-mostly
-
-structured tables.
+It expects mostly structured tables.
 
 ---
 
@@ -1007,21 +999,8 @@ Snowflake is also
 Enterprise Data Warehouse
 ```
 
-But
-
-its architecture is
-
-very different.
-
-Instead of tightly coupling
-
-Storage
-
-and
-
-Compute
-
-like traditional databases,
+But its architecture is very different.
+Instead of tightly coupling Storage and Compute like traditional databases,
 
 Snowflake separates them.
 
@@ -1041,25 +1020,13 @@ Shared Cloud Storage
         Compute Cluster B
 ```
 
-This means
-
-many teams
-
-can query
-
-the same data
-
-without interfering with each other.
+This means many teams can query the same data without interfering with each other.
 
 ---
 
 ## BigQuery
 
-BigQuery is Google's
-
-serverless
-
-cloud data warehouse.
+BigQuery is Google's serverless cloud data warehouse.
 
 Think
 
@@ -1075,15 +1042,7 @@ SQL
 Infinite Scaling
 ```
 
-You
-
-don't
-
-manage servers.
-
-Google manages everything.
-
-You simply run SQL.
+You don't manage servers. Google manages everything. You simply run SQL.
 
 ---
 
@@ -1123,10 +1082,7 @@ Snowflake
 BigQuery
 ```
 
-Scale to
-
-petabytes.
-
+Scale to petabytes. 
 Mostly SQL.
 
 ---
@@ -1139,29 +1095,7 @@ Lakehouse
 Databricks
 ```
 
-Support
-
-SQL
-
-*
-
-Python
-
-*
-
-Spark
-
-*
-
-AI
-
-*
-
-Streaming
-
-*
-
-ML
+Support SQL * Python * Spark * AI * Streaming * ML
 
 ---
 
@@ -1324,7 +1258,7 @@ Each solves different problems.
 
 ---
 
-###### If your workload is
+If your workload is
 
 ```text
 100 TB JSON
