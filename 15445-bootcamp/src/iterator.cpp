@@ -25,10 +25,10 @@
 // is true with the pointer being used to iterate through a C style array.
 
 // There are a few examples about how to use iterators to access elements
-// in C++ STL containers in vectors.cpp, sets.cpp, unordered_maps.cpp, 
+// in C++ STL containers in vectors.cpp, sets.cpp, unordered_maps.cpp,
 // and auto.cpp. This is because using iterators in C++ to access and modify
 // elements in C++ STL containers is considered good style, and worth
-// mentioning in these files. 
+// mentioning in these files.
 
 // This file will mainly focus on the implementation of iterators. In this
 // file, we demonstrate implementing C++ iterators by writing a basic doubly
@@ -39,126 +39,117 @@
 
 // This is the definition of the Node struct, used in our DLL.
 struct Node {
-  Node(int val) 
-    : next_(nullptr)
-    , prev_(nullptr)
-    , value_(val) {}
+  Node(int val) : next_(nullptr), prev_(nullptr), value_(val) {}
 
-  Node* next_;
-  Node* prev_;
+  Node *next_;
+  Node *prev_;
   int value_;
 };
 
-// This class implements a C++ style iterator for the doubly linked list class 
+// This class implements a C++ style iterator for the doubly linked list class
 // DLL. This class's constructor takes in a node that marks the start of the
 // iterating. It also implements several operators that increment the iterator
 // (i.e. accessing the next element in the DLL) and test for equality between
 // two different iterators by comparing their curr_ pointers.
 class DLLIterator {
-  public:
-    DLLIterator(Node* head) 
-      : curr_(head) {}
+private:
+  Node *curr_;
 
-    // Implementing a prefix increment operator (++iter).
-    // Increment the iterator first, then return the updated iterator.
-    DLLIterator& operator++() {
-      // Why return reference?  Because we do not need a copy.
-      // no copy , faster, supports chaining
-      // "Move this iterator forward and return myself."
-      curr_ = curr_->next_;
-      return *this; //reference to itself
-    }
+public:
+  DLLIterator(Node *head) : curr_(head) {}
 
-    // Implementing a postfix increment operator (iter++). 
-    // Return the old iterator value first, then increment the iterator.
-    // The difference  between a prefix and postfix increment operator is the return value
-    // of the operator. The prefix operator returns the result of the
-    // increment, while the postfix operator returns the iterator before
-    // the increment.
-    DLLIterator operator++(int) {
-      //Create copy:  temp is a local variable,When function returns,temp destroyed, soif Returning reference , dangling reference,Undefined behavior. 
-      // so  must return by value.
-      // Why does postfix have an int parameter?
-      // Because C++ needed a way to distinguish: ++iter from iter++
-      // "Save my old position, move myself forward, and give the caller the old position."
-      DLLIterator temp = *this; 
-      ++*this;
-      return temp;
-    }
+  // Implementing a prefix increment operator (++iter).
+  // Increment the iterator first, then return the updated iterator.
+  DLLIterator &operator++() {
+    // Why return reference?  Because we do not need a copy.
+    // no copy , faster, supports chaining
+    // "Move this iterator forward and return myself."
+    curr_ = curr_->next_;
+    return *this; // reference to itself
+  }
 
-    // This is the equality operator for the DLLIterator class. It
-    // tests that the current pointers are the same.
-    bool operator==(const DLLIterator &itr) const {
-      return itr.curr_ == this->curr_;
-    }
+  // Implementing a postfix increment operator (iter++).
+  // Return the old iterator value first, then increment the iterator.
+  // The difference  between a prefix and postfix increment operator is the
+  // return value of the operator. The prefix operator returns the result of the
+  // increment, while the postfix operator returns the iterator before
+  // the increment.
+  DLLIterator operator++(int) {
+    // Create copy:  temp is a local variable,When function returns,temp
+    // destroyed, soif Returning reference , dangling reference,Undefined
+    // behavior.
+    //  so  must return by value.
+    //  Why does postfix have an int parameter?
+    //  Because C++ needed a way to distinguish: ++iter from iter++
+    //  "Save my old position, move myself forward, and give the caller the old
+    //  position."
+    DLLIterator temp = *this;
+    ++*this;
+    return temp;
+  }
 
-    // This is the inequality operator for the DLLIterator class. It
-    // tests that the current pointers are not the same.
-    bool operator!=(const DLLIterator &itr) const {
-      return itr.curr_ != this->curr_;
-    }
+  // This is the equality operator for the DLLIterator class. It
+  // tests that the current pointers are the same.
+  bool operator==(const DLLIterator &itr) const {
+    return itr.curr_ == this->curr_;
+  }
 
-    // This is the dereference operator for the DLLIterator class. It
-    // returns the value of the element at the current position of the
-    // iterator. The current position of the iterator is marked by curr_,
-    // and we can access the value of curr_ by accessing its value field.
-    int operator*() {
-      return curr_->value_;
-    }
+  // This is the inequality operator for the DLLIterator class. It
+  // tests that the current pointers are not the same.
+  bool operator!=(const DLLIterator &itr) const {
+    return itr.curr_ != this->curr_;
+  }
 
-  private:
-    Node* curr_;
+  // This is the dereference operator for the DLLIterator class. It
+  // returns the value of the element at the current position of the
+  // iterator. The current position of the iterator is marked by curr_,
+  // and we can access the value of curr_ by accessing its value field.
+  int operator*() { return curr_->value_; }
 };
 
 // This is a basic implementation of a doubly linked list. It also includes
 // iterator functions Begin and End, which return DLLIterators that can be
 // used to iterate through this DLL instance.
 class DLL {
-  public:
-    // DLL class constructor.
-    DLL() 
-    : head_(nullptr)
-    , size_(0) {}
+public:
+  Node *head_{nullptr};
+  size_t size_;
 
-    // Destructor should delete all the nodes by iterating through them.
-    ~DLL() {
-      Node *current = head_;
-      while(current != nullptr) {
-        Node *next = current->next_;
-        delete current;
-        current = next;
-      }
-      head_ = nullptr;
+  // DLL class constructor.
+  DLL() : head_(nullptr), size_(0) {}
+
+  // Destructor should delete all the nodes by iterating through them.
+  ~DLL() {
+    Node *current = head_;
+    while (current != nullptr) {
+      Node *next = current->next_;
+      delete current;
+      current = next;
+    }
+    head_ = nullptr;
+  }
+
+  // Function for inserting val at the head of the DLL.
+  void InsertAtHead(int val) {
+    Node *new_node = new Node(val);
+    new_node->next_ = head_;
+
+    if (head_ != nullptr) {
+      head_->prev_ = new_node;
     }
 
-    // Function for inserting val at the head of the DLL.
-    void InsertAtHead(int val) {
-      Node *new_node = new Node(val);
-      new_node->next_ = head_;
+    head_ = new_node;
+    size_ += 1;
+  }
 
-      if (head_ != nullptr) {
-        head_->prev_ = new_node;
-      }
+  // The Begin() function returns an iterator to the head of the DLL,
+  // which is the first element to access when iterating through.
+  DLLIterator Begin() { return DLLIterator(head_); }
 
-      head_ = new_node;
-      size_ += 1;
-    }
-
-    // The Begin() function returns an iterator to the head of the DLL,
-    // which is the first element to access when iterating through.
-    DLLIterator Begin() {
-      return DLLIterator(head_);
-    }
-
-    // The End() function returns an iterator that marks the one-past-the-last
-    // element of the iterator. In this case, this would be an iterator with
-    // its current pointer set to nullptr.
-    DLLIterator End() {
-      return DLLIterator(nullptr);
-    }
-
-    Node* head_{nullptr};
-    size_t size_;
+  // The End() function returns an iterator that marks the one-past-the-last
+  // element of the iterator. In this case, this would be an iterator with
+  // its current pointer set to nullptr.
+  DLLIterator End() { return DLLIterator(nullptr); }
 };
 
 // The main function shows the usage of the DLL iterator.
@@ -173,13 +164,15 @@ int main() {
   dll.InsertAtHead(1);
 
   // We can iterate through our DLL via both our prefix and postfix operators.
-  std::cout << "Printing elements of the DLL dll via prefix increment operator\n";
+  std::cout
+      << "Printing elements of the DLL dll via prefix increment operator\n";
   for (DLLIterator iter = dll.Begin(); iter != dll.End(); ++iter) {
     std::cout << *iter << " ";
   }
   std::cout << std::endl;
 
-  std::cout << "Printing elements of the DLL dll via postfix increment operator\n";
+  std::cout
+      << "Printing elements of the DLL dll via postfix increment operator\n";
   for (DLLIterator iter = dll.Begin(); iter != dll.End(); iter++) {
     std::cout << *iter << " ";
   }

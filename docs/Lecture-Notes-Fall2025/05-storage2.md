@@ -877,14 +877,429 @@ The tradeoffs of using Log-Structured Storage are summarized below:
 - Write amplification (for each logical write, there could be multiple physical writes during the compaction process). 
 
 
-
+## The Techs LSM systems use
 That's why LSM systems use:
+- sort-merge algorithm
 - Bloom filters
 - indexes
 - SSTable metadata
 - min/max key ranges
 - block indexes
 - compaction
+
+### Sort-merge algorithm
+
+Yes — **they are closely related, but they are not exactly the same thing**.
+
+The key distinction is:
+
+> **Merge sort is a sorting algorithm.**
+> **Sort-merge is a general technique: first sort, then merge already-sorted data.**
+
+In your LSM-tree context, the "merge" part is especially important.
+
+---
+
+#### 1. Merge sort
+
+**Merge sort** sorts one collection of unsorted values.
+
+For example:
+
+```text
+Input:
+[7, 2, 5, 1, 9, 3]
+```
+
+It recursively splits:
+
+```text
+[7, 2, 5, 1, 9, 3]
+       /          \
+ [7, 2, 5]      [1, 9, 3]
+    /   \          /   \
+ [7] [2,5]       [1] [9,3]
+```
+
+Eventually you have sorted small pieces:
+
+```text
+[7] [2] [5] [1] [9] [3]
+```
+
+Then **merge** them:
+
+```text
+[2] + [5] → [2,5]
+
+[7] + [2,5] → [2,5,7]
+
+[1] + [3] → [1,3]
+
+[9] + [1,3] → [1,3,9]
+```
+
+Finally:
+
+```text
+[2,5,7] + [1,3,9]
+        ↓
+[1,2,3,5,7,9]
+```
+
+genui{"learning_viz":{"type_id":"MERGE_SORT"}}
+
+So **merge sort itself contains two operations**:
+
+```text
+MERGE SORT
+     │
+     ├── recursively SORT/SPLIT
+     │
+     └── MERGE sorted pieces
+```
+
+---
+
+#### 2. What does "sort-merge" mean?
+
+Sort-merge is more general.
+
+Suppose you **already have sorted data**:
+
+```text
+A = [1, 4, 7, 10]
+
+B = [2, 3, 8, 12]
+```
+
+You don't need to sort them again.
+
+You simply merge them:
+
+```text
+A: 1  4  7  10
+    ↑
+
+B: 2  3  8  12
+    ↑
+```
+
+Compare the front elements:
+
+```text
+1 < 2 → output 1
+2 < 4 → output 2
+3 < 4 → output 3
+4 < 8 → output 4
+...
+```
+
+Result:
+
+```text
+[1,2,3,4,7,8,10,12]
+```
+
+That's the **merge** operation.
+
+---
+
+#### 3. Why does your LSM-tree lecture say "sort-merge"?
+
+This is where it becomes particularly important.
+
+Your SSTables are **already sorted**.
+
+For example:
+
+```text
+SSTable 1
+A → 10
+C → 30
+F → 60
+```
+
+and:
+
+```text
+SSTable 2
+B → 20
+C → 40
+D → 50
+```
+
+Notice both are already sorted by key.
+
+Therefore, during compaction, the DBMS doesn't need to run a complete merge sort.
+
+It can simply **merge the sorted SSTables**:
+
+```text
+SSTable 1             SSTable 2
+
+A → 10                B → 20
+C → 30                C → 40
+F → 60                D → 50
+   │                     │
+   └─────────┬───────────┘
+             ↓
+          MERGE
+             ↓
+A → 10
+B → 20
+C → 40       ← newer version wins
+D → 50
+F → 60
+```
+
+That's what your lecture means by:
+
+> "use a sort-merge algorithm to combine SSTables"
+
+More precisely, in this context it's often better to think:
+
+> **Merge multiple already-sorted runs/files.**
+
+---
+
+#### 4. Why is this so efficient?
+
+Because each SSTable is sorted.
+
+Suppose:
+
+```text
+SSTable A: 1  5  9  15
+SSTable B: 2  4  10 20
+```
+
+We maintain a pointer into each:
+
+```text
+A: [1] 5  9 15
+     ↑
+
+B: [2] 4 10 20
+     ↑
+```
+
+Compare:
+
+```text
+1 < 2
+```
+
+output 1.
+
+Then:
+
+```text
+A: 1 [5] 9 15
+       ↑
+
+B: [2] 4 10 20
+     ↑
+```
+
+Compare:
+
+```text
+5 > 2
+```
+
+output 2.
+
+Continue.
+
+You only need to scan each input once.
+
+For two sorted inputs:
+
+```text
+O(N + M)
+```
+
+rather than:
+
+```text
+O((N+M) log(N+M))
+```
+
+for sorting everything from scratch.
+
+---
+
+#### 5. This is exactly what makes LSM compaction attractive
+
+Imagine:
+
+```text
+SSTable 1: 10 GB
+SSTable 2: 10 GB
+SSTable 3: 10 GB
+```
+
+All are already sorted.
+
+During compaction:
+
+```text
+       SSTable 1
+           │
+       SSTable 2 ──→ MERGE ──→ New SSTable
+           │
+       SSTable 3
+```
+
+The DBMS can perform a streaming merge:
+
+```text
+read → compare → output
+read → compare → output
+read → compare → output
+...
+```
+
+It doesn't need to load all 30 GB into memory.
+
+Conceptually:
+
+```text
+Disk                  Memory                 Disk
+
+SSTable 1 ──read──→
+SSTable 2 ──read──→  merge buffer ──write──→ New SSTable
+SSTable 3 ──read──→
+```
+
+This is extremely important for databases because the files can be **much larger than RAM**.
+
+---
+
+#### 6. And there's one extra thing LSM compaction does
+
+LSM compaction isn't merely a normal merge.
+
+It also has to resolve **multiple versions of the same key**.
+
+For example:
+
+```text
+L0:
+A → 100   seq=10
+
+L1:
+A → 50    seq=5
+```
+
+During compaction:
+
+```text
+A → 100   ← newer
+A → 50    ← older
+```
+
+The compaction process keeps:
+
+```text
+A → 100
+```
+
+and can discard the obsolete version when it is safe.
+
+Similarly:
+
+```text
+L0:
+B → DELETE   seq=20
+
+L1:
+B → 200      seq=10
+```
+
+The result can eventually be:
+
+```text
+B → DELETE
+```
+
+and, once the tombstone is safe to discard, B can disappear completely.
+
+So LSM compaction is:
+
+```text
+        SORTED SSTables
+              │
+              ↓
+           MERGE
+              │
+              ↓
+      resolve duplicate keys
+              │
+              ↓
+      keep newest version
+              │
+              ↓
+      discard obsolete data
+              │
+              ↓
+       new sorted SSTable
+```
+
+---
+
+#### 7. So, are they the same?
+
+I'd remember it this way:
+
+| Concept            | What it does                                               |
+| ------------------ | ---------------------------------------------------------- |
+| **Merge**          | Combines already-sorted sequences                          |
+| **Merge sort**     | Sorts unsorted data using splitting + merging              |
+| **Sort-merge**     | General pattern of sorting data/runs and then merging them |
+| **LSM compaction** | Merges already-sorted SSTables and resolves old versions   |
+
+The relationship is:
+
+```text
+                 MERGE SORT
+                /          \
+           SORT              MERGE
+                              ↑
+                              │
+                    LSM compaction
+                    heavily uses this
+```
+
+### The important point for your current lecture
+
+When you see:
+
+> **"sort-merge algorithm to combine SSTables"**
+
+don't picture:
+
+```text
+SSTables
+   ↓
+throw everything into memory
+   ↓
+merge sort
+```
+
+Instead picture:
+
+```text
+SSTable 1 ─┐
+SSTable 2 ─┼──→ multi-way MERGE ──→ new SSTable
+SSTable 3 ─┘
+```
+
+because **each SSTable is already sorted**.
+
+This distinction becomes very useful when you later study **external merge sort**, **sort-merge join**, and **LSM compaction** — they all exploit the same fundamental primitive: **efficiently merging sorted runs without loading the entire dataset into RAM**.
+
 
 
 ## RocksDB
