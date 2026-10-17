@@ -167,42 +167,489 @@ RLE compresses runs (consecutive instances) of the same value in a single column
 
 - The number of elements in the run (length) 
 
-The DBMS should sort the columns intelligently beforehand to maximize compression opportunities. This clusters duplicate attributes, thereby increasing the compression ratio. Note that the effectiveness of RLE greatly depends on the underlying data characteristics (e.g. number and frequency of attributes in each data). 
+![image](../../images/storage/compression_rle_01.png)
+![image](../../images/storage/compression_rle_02.png)
+
+The DBMS should `sort` the columns intelligently beforehand to maximize compression opportunities. This clusters duplicate attributes, thereby increasing the compression ratio. Note that the effectiveness of RLE greatly depends on the underlying data characteristics (e.g. number and frequency of attributes in each data). 
 
 ### **Bit-Packing Encoding** 
+![image](../../images/storage/compression_bit_packing_01.png)
 
 When all values for an attribute are less than the value’s declared largest size, store them with fewer bits. 
 
 Use bit-shifting tricks to operate on multiple values in a single word.
 
 ### **Patching / Mostly Encoding** 
+![image](../../images/storage/compression_patching_encoding_01.png)
 
 Bit-packing variant that uses a special marker to indicate when a value exceeds the largest size and then maintains a look-up table to store them. Use when values are ”mostly” less than the largest size. 
 
+The remaining values that cannot be compressed are stored in their raw form.
+
 ### **Bitmap Encoding** 
 
-The DBMS stores a separate bitmap for each unique value of a particular attribute where an offset in the vector corresponds to a tuple. The _i_<sup>_th_</sup> position in the bitmap corresponds to the _i_<sup>_th_</sup> tuple in the table and indicates whether that value is present in the attribute of that tuple. The bitmap is typically segmented into chunks to avoid allocating large blocks of contiguous memory. 
+The DBMS stores a separate bitmap for each unique value of a particular attribute where an offset in the vector corresponds to a tuple. 
 
-This approach is only practical if the value cardinality is low, since the size of the bitmap is linearly proportional to the cardinality of the attribute value. If the cardinality of the value is high, then the bitmap can become larger than the original data set. 
+- The _i_<sup>_th_</sup> position in the bitmap corresponds to the _i_<sup>_th_</sup> tuple in the table and indicates whether that value is present in the attribute of that tuple. 
+- The bitmap is typically segmented into chunks to avoid allocating large blocks of contiguous memory. 
+
+![image](../../images/storage/compression_bitmap_encoding_01.png)
+
+This approach is only practical **if the value cardinality is low**, since the size of the bitmap is linearly proportional to the cardinality of the attribute value. If the cardinality of the value is high, then the bitmap can become larger than the original data set. 
+
+
+Assume we have 10 million tuples.
+43,000 zip codes in the US.
+
+```SQL
+→ 10000000 × 32-bits = 40 MB
+→ 10000000 × 43000 = 53.75 GB
+
+CREATE TABLE customer (
+ id INT PRIMARY KEY,
+ name VARCHAR(32),
+ email VARCHAR(64),
+ address VARCHAR(64),
+ zip_code INT
+);
+
+```
+
+Every time the application inserts a new tuple, the DBMS must extend 43,000 different bitmaps.
 
 There are compressed data structures to for sparse data sets (for example: Roaring Bitmaps) 
+
+
+
+
 
 ### **Delta Encoding** 
 
 Instead of storing exact values, record the difference between values that follow each other in the same column. The base value can be stored in-line or in a separate look-up table. We can also use RLE on the stored deltas to get even better compression ratios. 
+→ Store base value in-line or in a separate look-up table. 
+→ Combine with RLE to get even better compression ratios.
+Frame-of-Reference Variant: Use global min value.
+
+![image](../../images/storage/compression_delta_encoding_01.png)
+
 
 ### **Dictionary Compression** 
 
 The most common database compression scheme is dictionary encoding. The DBMS replaces frequent patterns in values with smaller codes. It then stores only these codes and a data structure (i.e. the dictionary) that maps these codes to their original value. A dictionary compression scheme needs to support fast encoding/decoding, and needs to be order-preserving if it needs to work with range queries. 
 
-**Encoding and Decoding:** The dictionary needs to decide how to **encode** (convert uncompressed value into its compressed form) and **decode** (convert compressed value back into its original form) data. As such, it is not possible to use hash functions. 
+#### Encoding and Decoding
 
-The encoded values also need to support sorting in the same order as original values (i.e. **order-preserving encodings** ). This ensures that the compressed queries run on compressed data return results that are 
+The dictionary needs to decide how to **encode** (convert uncompressed value into its compressed form) and **decode** (convert compressed value back into its original form) data. As such, it is not possible to use hash functions. 
 
 
+#### Order-preserving encoding
 
-consistent with uncompressed queries run on the original data. This order-preserving property allows operations to be performed directly on the codes. 
+The encoded values also need to support sorting in the same order as original values (i.e. **order-preserving encodings** ). This ensures that the compressed queries run on compressed data return results that are consistent with uncompressed queries run on the original data. This order-preserving property allows operations to be performed directly on the codes. 
 
 On certain queries (such as string match), queries can be executed faster. 
 
 
+##### Collation
+The encoded values need to support the same collation  as the original values
+
+Collation is the rule used to determine the ordering of strings.
+For a simple case, suppose the database uses ordinary lexicographic/ASCII-like ordering:
+```
+Andrea
+Andy
+Jignesh
+Mr.Pickles
+```
+Then: Andrea < Andy < Jignesh < Mr.Pickles
+
+An order-preserving dictionary assigns codes according to this order:
+
+```
+Original value       Code
+
+Andrea                10
+Andy                  20
+Jignesh               30
+Mr.Pickles            40
+```
+Therefore: 
+- Andrea < Andy corresponds to 10 < 20
+- Andy < Jignesh corresponds to 20 < 30
+So the DBMS can compare codes instead of strings.
+
+More precisely:
+If A < B according to the database's string collation, then code(A) < code(B) must also hold.
+
+And similarly for equality:
+A = B  →  code(A) = code(B)
+
+
+##### Why does this matter?
+Suppose the original query is:
+```SQL
+WHERE name >= 'Andy'
+  AND name < 'Mr.Pickles'
+```
+With the dictionary:
+Andrea     → 10
+Andy       → 20
+Jignesh    → 30
+Mr.Pickles → 40
+we can transform the predicate into something conceptually like:
+
+```SQL
+WHERE name_code >= 20
+  AND name_code < 40
+```
+
+The DBMS doesn't have to repeatedly compare strings such as:  "Jignesh" < "Mr.Pickles"
+It can compare: 30 < 40
+That's a major benefit in a column store.
+
+
+#### LIKE 'And%' → BETWEEN 10 AND 20? 
+
+```SQL
+SELECT * FROM users  WHERE name LIKE 'And%'
+---in original data  transformed to 
+
+SELECT * FROM users WHERE name BETWEEN 10 AND 20
+----in Compressed Data?
+```
+
+Your dictionary is:
+```
+code   value
+10     Andrea
+20     Andy
+30     Jignesh
+40     Mr.Pickles
+```
+
+The predicate is: `name LIKE 'And%'`
+Let's ask: Which dictionary values start with "And"?
+
+```
+Andrea     ← starts with "And"
+Andy       ← starts with "And"
+Jignesh    ← no
+Mr.Pickles ← no
+```
+
+So the matching dictionary entries are:
+Andrea → 10
+Andy   → 20
+Therefore, for this particular dictionary, the matching codes happen to be: 10 through 20
+
+So the DBMS can identify the matching code range: 10 <= code <= 20
+or conceptually:  `WHERE name_code BETWEEN 10 AND 20`
+But don't think that LIKE is generally equivalent to BETWEEN. That's not true.
+
+The DBMS first uses the dictionary to determine: 
+Which dictionary values satisfy LIKE 'And%'?
+
+Then it obtains the corresponding code range.
+For example, suppose the dictionary were:
+```
+10  Andrea
+20  Andy
+30  Andrew
+40  Bob
+50  Candy
+```
+Then: `LIKE 'And%'` would correspond to: 10, 20, 30
+and potentially a code range: 10–30
+The key is that all strings beginning with And are contiguous under lexicographic ordering.
+
+
+Why does LIKE 'And%' correspond to a range?
+Think about the sorted dictionary:
+```
+Andrea
+Andy
+Andrew
+Bob
+Candy
+David
+...
+```
+
+All strings beginning with:"And" 
+form a contiguous region:
+
+```
+                 matching region
+                      ↓↓↓↓↓
+Andrea
+Andy
+Andrew
+───────────────
+Bob
+Candy
+David
+```
+
+Therefore, if the dictionary is sorted, the DBMS can find the first and last dictionary entries satisfying the prefix.
+Conceptually:
+
+```
+"And..." prefix
+      ↓
+find lower boundary
+      ↓
+Andrea
+      ...
+find upper boundary
+      ↓
+Andrew
+```
+
+Then:
+Andrea → 10
+Andrew → 30
+So the column predicate can become approximately: code BETWEEN 10 AND 30
+This is the connection between:
+order-preserving dictionary encoding and prefix/string matching.
+
+
+#### Why Perform scan on column VS Only need to access dictionary
+```SQL
+SELECT name FROM users WHERE name LIKE 'And%'
+---Still must perform scan on column?
+
+SELECT DISTINCT name FROM users WHERE name LIKE 'And%'
+--- just Only need to access dictionary?
+
+```
+
+
+Because the dictionary tells us which codes match, but it doesn't tell us which rows contain those codes.
+Suppose:
+
+```
+Dictionary:
+
+10 → Andrea
+20 → Andy
+30 → Jignesh
+40 → Mr.Pickles
+```
+
+and the compressed column is:
+
+```
+Row       name_code
+
+1            30
+2            20
+3            40
+4            10
+5            30
+6            20
+7            40
+8            20
+```
+
+The dictionary tells us:
+10 → Andrea  ✓
+20 → Andy    ✓
+Therefore:
+matching codes = {10, 20}
+But now we need to answer:
+Which rows contain code 10 or 20?
+
+We must inspect the encoded column:
+
+```
+30 → no
+20 → YES
+40 → no
+10 → YES
+30 → no
+20 → YES
+40 → no
+20 → YES
+```
+
+Therefore we need to scan the encoded column.
+The important distinction is:
+
+```
+Dictionary
+    │
+    │ tells us WHAT values match
+    ↓
+{10, 20}
+    │
+    │ but where are these codes?
+    ↓
+Encoded column
+    │
+    │ tells us WHICH ROWS match
+    ↓
+rows 2, 4, 6, 8
+```
+
+
+So:
+Dictionary lookup solves the value-domain problem, not the row-location problem.
+
+
+why can SELECT DISTINCT name ... only need the dictionary?
+
+This is the beautiful part of dictionary encoding.
+Your query:
+
+```SQL
+SELECT DISTINCT name
+FROM users
+WHERE name LIKE 'And%';
+```
+
+is asking: "What are the distinct names satisfying this condition?"
+
+It is not asking: "Which rows contain these names?"
+
+The dictionary already contains one entry per distinct value.
+So: 
+
+```
+Dictionary:
+
+10 → Andrea
+20 → Andy
+30 → Jignesh
+40 → Mr.Pickles
+```
+
+We can inspect the dictionary:
+
+```
+Andrea     → matches
+Andy       → matches
+Jignesh    → doesn't match
+Mr.Pickles → doesn't match
+```
+
+and immediately produce:
+```
+Andrea
+Andy
+```
+We don't care whether Andrea occurs in:
+```
+1 row
+100 rows
+1 million rows
+```
+
+because DISTINCT removes duplicates anyway.
+
+
+Compare the two queries
+This is probably the most important thing to remember.
+```SQL
+Query A
+SELECT name
+FROM users
+WHERE name LIKE 'And%';
+```
+
+Need:
+
+```
+Dictionary
+    ↓
+find matching codes
+    ↓
+10, 20
+    ↓
+scan encoded column
+    ↓
+find rows containing 10 or 20
+    ↓
+return names
+```
+So the column still matters.
+
+Query B
+```SQL
+SELECT DISTINCT name
+FROM users
+WHERE name LIKE 'And%';
+```
+Need:
+```
+Dictionary
+    ↓
+find values satisfying LIKE
+    ↓
+Andrea
+Andy
+    ↓
+done
+```
+
+No need to inspect the encoded column for the logical result.
+
+
+An even more interesting example
+Suppose the table contains 1 billion rows:
+
+```
+users
+────────────────────────
+1,000,000,000 rows
+```
+
+but only 100 distinct names:
+```
+Dictionary
+────────────────────────
+100 entries
+```
+
+And:
+```SQL
+SELECT DISTINCT name
+FROM users
+WHERE name LIKE 'And%';
+```
+The answer might be determined by inspecting only those 100 dictionary entries.
+The 1-billion-row encoded column isn't necessary to determine the set of distinct matching values.
+That's one of the reasons dictionary encoding is particularly powerful for low-cardinality columns in OLAP systems.
+
+
+One subtle correction: DISTINCT is not magic
+There's an important qualification.
+This:
+```SQL
+SELECT DISTINCT name
+FROM users
+WHERE name LIKE 'And%';
+```
+
+can potentially be answered from the dictionary **only if the query semantics allow that.**
+
+For a simple dictionary-encoded column, the dictionary represents the set of distinct values that occur in that column.
+
+So for: `DISTINCT(name)`
+the dictionary already has exactly the information we need.
+But if you ask something involving row-level relationships, you need the encoded column.
+For example:
+
+```SQL
+SELECT name, age
+FROM users
+WHERE name LIKE 'And%';
+```
+
+Now the dictionary can't tell us which age belongs to which name.
+We need row-level information.
+
+
+The key sentence to remember
+**The dictionary tells you which values/codes satisfy the predicate; the encoded column tells you which tuples contain those codes.**
+
+And `DISTINCT` is special because it asks only for the set of values, which the dictionary already represents.
+One final subtlety: this all assumes the dictionary is **order-preserving under the DBMS's actual collation**. If the collation is case-insensitive, accent-sensitive, locale-specific, etc., the ordering/range reasoning has to follow that collation—not simple ASCII orderin

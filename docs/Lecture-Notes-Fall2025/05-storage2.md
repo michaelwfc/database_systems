@@ -651,6 +651,31 @@ The log-structured storage model works with this assumption and addresses some o
 | Old version replaced    | Old versions remain temporarily |
 | No/less compaction      | Requires compaction             |
 
+
+Slotted-page storage
+
+```
+In-place updates
+        +
+Variable-length tuple support
+        +
+Fragmentation
+        +
+Page compaction / vacuum maintenance
+```
+
+Log-structured storage
+```
+Fast sequential writes
+        +
+Write amplification
+        +
+Read amplification / possible slow reads
+        +
+Compaction maintenance
+```
+
+
 ## Idea : 
 
 Instead of storing tuples in pages and updating them in-place, Log-Structured Storage maintains a log that records changes to tuples. This idea is based on **log-structured file systems (LSFS)**<sup>1</sup> and **log-structured merge trees (LSM Tree)**<sup>2</sup> . 
